@@ -76,8 +76,31 @@ export default function SimpleUserManagementPage() {
       const debugResponse = await fetch('/api/debug/supabase')
       const debugData = await debugResponse.json()
       
+      // Get the actual authenticated user ID
+      const authTest = debugData.tests.find((t: any) => t.name === 'Auth Session')
+      const currentAuthUserId = authTest?.data?.userId
+      
+      console.log('🔍 Auth user ID:', currentAuthUserId)
+      
+      if (!currentAuthUserId) {
+        toast.error('Authentication required')
+        return
+      }
+      
+      // Find the actual current user from service test data
       const serviceTest = debugData.tests.find((t: any) => t.name === 'Service Role Client')
-      const currentUser = serviceTest?.data?.[0]
+      const allUsers = serviceTest?.data || []
+      
+      console.log('🔍 All users from service test:', allUsers)
+      console.log('🔍 Looking for user with auth ID:', currentAuthUserId)
+      
+      // Try to match by the user's auth_user_id field or the id field
+      let currentUser = allUsers.find((u: any) => u.auth_user_id === currentAuthUserId)
+      if (!currentUser) {
+        currentUser = allUsers.find((u: any) => u.id === currentAuthUserId)
+      }
+      
+      console.log('👤 Found current user:', currentUser)
       
       if (!currentUser) {
         toast.error('Could not load user information')
