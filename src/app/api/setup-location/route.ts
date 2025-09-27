@@ -100,9 +100,7 @@ export async function POST(request: NextRequest) {
       is_active: true,
       location_status: 'verified',
       created_by: user.id,
-      notes: 'Location set during initial institution setup',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      notes: 'Location set during initial institution setup'
     }
 
     if (existingLocation) {

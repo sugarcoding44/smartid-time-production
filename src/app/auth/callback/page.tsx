@@ -108,7 +108,31 @@ export default function AuthCallbackPage() {
           // Default: redirect to location setup
           console.log('🔄 Setup complete, redirecting to setup-location...')
           toast.success('Institution created! Now set up your location...')
-          window.location.replace('/setup-location')
+          
+          // Try to ensure session is set before redirecting
+          if (sessionSetPromise) {
+            console.log('🔄 Waiting briefly for session to be set...')
+            try {
+              await Promise.race([
+                sessionSetPromise,
+                new Promise(resolve => setTimeout(resolve, 1000)) // Wait max 1 second
+              ])
+              console.log('✅ Session should be set now')
+            } catch (error) {
+              console.warn('⚠️ Session setting failed, but proceeding:', error)
+            }
+          }
+          
+          // Include tokens in the redirect URL as fallback
+          const hashParams = new URLSearchParams(window.location.hash.substring(1))
+          const accessToken = hashParams.get('access_token')
+          const refreshToken = hashParams.get('refresh_token')
+          
+          if (accessToken && refreshToken) {
+            window.location.replace(`/setup-location?access_token=${accessToken}&refresh_token=${refreshToken}`)
+          } else {
+            window.location.replace('/setup-location')
+          }
           
         } catch (setupError) {
           console.error('❌ Setup API failed:', setupError)

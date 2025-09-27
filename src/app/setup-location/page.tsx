@@ -55,6 +55,14 @@ export default function SetupLocationPage() {
   const [currentUser, setCurrentUser] = useState<any>(null)
   const router = useRouter()
   const supabase = createClient()
+  
+  // Get URL search params to check for tokens
+  const [searchParams] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return new URLSearchParams(window.location.search)
+    }
+    return new URLSearchParams()
+  })
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
   const hasValidApiKey = apiKey && apiKey !== 'your_api_key_here'
@@ -62,16 +70,47 @@ export default function SetupLocationPage() {
   // Simple user check with retry - don't redirect, just check for session
   useEffect(() => {
     let retryCount = 0
-    const maxRetries = 3
+    const maxRetries = 5
     const retryDelay = 1000 // 1 second
     
     const checkUser = async () => {
       try {
+        // First try to get existing session
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user) {
           setCurrentUser(session.user)
           console.log('✅ User session found:', session.user.email)
-        } else if (retryCount < maxRetries) {
+          return
+        }
+        
+        // If no session, try to set it from URL tokens
+        const accessToken = searchParams.get('access_token')
+        const refreshToken = searchParams.get('refresh_token')
+        
+        if (accessToken && refreshToken && retryCount === 0) {
+          console.log('🔑 Setting session from URL tokens...')
+          try {
+            const { data, error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            })
+            
+            if (data.session?.user && !error) {
+              setCurrentUser(data.session.user)
+              console.log('✅ Session set from URL tokens:', data.session.user.email)
+              // Clean URL
+              window.history.replaceState({}, '', '/setup-location')
+              return
+            } else {
+              console.error('Session setting from URL failed:', error)
+            }
+          } catch (tokenError) {
+            console.error('Token session error:', tokenError)
+          }
+        }
+        
+        // Retry logic
+        if (retryCount < maxRetries) {
           console.log(`⚠️ No session found - retry ${retryCount + 1}/${maxRetries} in ${retryDelay}ms`)
           retryCount++
           setTimeout(checkUser, retryDelay)
@@ -88,7 +127,7 @@ export default function SetupLocationPage() {
     }
     
     checkUser()
-  }, [])
+  }, [searchParams, supabase.auth])
 
   // Debounce search for autocomplete
   useEffect(() => {
