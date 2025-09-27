@@ -1,11 +1,17 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🔄 Setup location API called')
     const body = await request.json()
+    console.log('📊 Received data:', {
+      address: body.address,
+      latitude: body.latitude,
+      longitude: body.longitude,
+      city: body.city,
+      state: body.state
+    })
     const {
       address,
       city,
@@ -25,68 +31,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create service role client for admin operations
-    const serviceSupabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-
-    // Get user from session - try Authorization header first, then cookies
-    const authHeader = request.headers.get('authorization')
-    let session = null
-    let sessionError = null
-
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      // Use Authorization header
-      const token = authHeader.split(' ')[1]
-      const supabaseClient = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      )
-      
-      const { data, error } = await supabaseClient.auth.getUser(token)
-      if (data.user && !error) {
-        session = { user: data.user, access_token: token }
-      } else {
-        sessionError = error
-      }
-    } else {
-      // Fall back to cookies
-      const cookieStore = cookies()
-      const supabaseClient = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          cookies: {
-            get(name: string) {
-              return cookieStore.get(name)?.value
-            },
-            set() {},
-            remove() {}
-          }
-        }
-      )
-
-      const { data: sessionData, error } = await supabaseClient.auth.getSession()
-      session = sessionData.session
-      sessionError = error
-    }
+    // Use server-side Supabase client for authentication
+    const supabase = await createClient()
     
-    if (sessionError || !session) {
-      console.error('Session error:', sessionError)
-      console.log('Session data:', session)
-      console.log('Available cookies:', cookieStore.getAll().map(c => c.name))
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      console.error('Authentication error:', authError)
       return NextResponse.json(
-        { error: 'Authentication required', details: sessionError?.message },
+        { error: 'Authentication required', details: authError?.message },
         { status: 401 }
       )
     }
 
+    console.log('✅ Authenticated user:', user.email)
+
     // Get user info including institution_id
-    const { data: userData, error: userError } = await serviceSupabase
+    const { data: userData, error: userError } = await supabase
       .from('users')
       .select('id, institution_id')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single()
 
     if (userError || !userData) {
@@ -104,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if location already exists for this institution
-    const { data: existingLocation, error: checkError } = await serviceSupabase
+    const { data: existingLocation, error: checkError } = await supabase
       .from('institution_locations')
       .select('id')
       .eq('institution_id', userData.institution_id)
@@ -122,7 +86,7 @@ export async function POST(request: NextRequest) {
     const locationData = {
       institution_id: userData.institution_id,
       name: 'Main Campus',
-      location_type: 'main_campus',
+      location_type: 'campus',
       address,
       city,
       state,
@@ -135,7 +99,7 @@ export async function POST(request: NextRequest) {
       is_primary: true,
       is_active: true,
       location_status: 'verified',
-      created_by: session.user.id,
+      created_by: user.id,
       notes: 'Location set during initial institution setup',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -143,7 +107,7 @@ export async function POST(request: NextRequest) {
 
     if (existingLocation) {
       // Update existing location
-      const { data: updatedLocation, error: updateError } = await serviceSupabase
+      const { data: updatedLocation, error: updateError } = await supabase
         .from('institution_locations')
         .update(locationData)
         .eq('id', existingLocation.id)
@@ -165,7 +129,7 @@ export async function POST(request: NextRequest) {
       })
     } else {
       // Create new location
-      const { data: newLocation, error: insertError } = await serviceSupabase
+      const { data: newLocation, error: insertError } = await supabase
         .from('institution_locations')
         .insert([locationData])
         .select()
