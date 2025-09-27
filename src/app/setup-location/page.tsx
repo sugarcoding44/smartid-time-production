@@ -423,6 +423,14 @@ export default function SetupLocationPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    console.log('💾 Form submission started')
+    console.log('👤 Current user state:', currentUser)
+    console.log('📍 Location data:', {
+      latitude: locationData.latitude,
+      longitude: locationData.longitude,
+      address: locationData.address
+    })
+
     if (!locationData.latitude || !locationData.longitude) {
       toast.error('Please select a location')
       return
@@ -434,9 +442,26 @@ export default function SetupLocationPage() {
     }
 
     if (!currentUser) {
-      toast.error('Authentication required')
-      router.push('/auth/signin')
-      return
+      console.error('❌ No currentUser found - checking session directly')
+      // Try to get session directly instead of relying on currentUser state
+      try {
+        const supabase = (await import('@/lib/supabase/client')).createClient()
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (!session) {
+          toast.error('Authentication required - no session found')
+          router.push('/auth/signin')
+          return
+        } else {
+          console.log('✅ Session found despite no currentUser:', session.user.email)
+          // Continue with the API call
+        }
+      } catch (error) {
+        console.error('❌ Session check failed:', error)
+        toast.error('Authentication required')
+        router.push('/auth/signin')
+        return
+      }
     }
 
     setLoading(true)

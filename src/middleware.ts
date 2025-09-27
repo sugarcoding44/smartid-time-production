@@ -8,6 +8,12 @@ export async function middleware(request: NextRequest) {
     },
   })
 
+  // ALWAYS allow home page to pass through - NO AUTHENTICATION CHECK
+  if (request.nextUrl.pathname === '/') {
+    console.log('🏠 Home page - allowing through without auth check')
+    return response
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
