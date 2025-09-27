@@ -40,14 +40,29 @@ export async function middleware(request: NextRequest) {
     userEmail: user?.email
   })
 
-  // Protected routes
-  const protectedRoutes = ['/dashboard', '/setup-location']
+  // Protected routes - temporarily exclude setup-location to prevent callback redirect issues
+  const protectedRoutes = ['/dashboard']
   const isProtectedRoute = protectedRoutes.some(route => request.nextUrl.pathname.startsWith(route))
   
   if (isProtectedRoute) {
     if (!user) {
       console.log('😫 Redirecting to signin - no user for protected route')
       return NextResponse.redirect(new URL('/auth/signin', request.url))
+    }
+  }
+  
+  // Special handling for setup-location - allow if user exists OR if coming from callback
+  if (request.nextUrl.pathname.startsWith('/setup-location')) {
+    if (!user) {
+      const referer = request.headers.get('referer')
+      const isFromCallback = referer && referer.includes('/auth/callback')
+      
+      if (!isFromCallback) {
+        console.log('😫 Redirecting to signin - no user for setup-location and not from callback')
+        return NextResponse.redirect(new URL('/auth/signin', request.url))
+      } else {
+        console.log('🔄 Allowing setup-location access from callback without full auth')
+      }
     }
   }
 

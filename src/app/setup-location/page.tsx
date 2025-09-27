@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { AuthLayout } from '@/components/layout/auth-layout'
 import { Button } from '@/components/ui/button'
@@ -9,9 +9,7 @@ import { Label } from '@/components/ui/label'
 import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api'
 import { MapPin, Search, Loader2, Navigation, CheckCircle, Map as MapIcon } from 'lucide-react'
 import { toast } from 'sonner'
-import { useAuth } from '@/contexts/auth-context'
-
-// Removed libraries to avoid legacy Places API
+import { createClient } from '@/lib/supabase/client'
 
 const mapContainerStyle = {
   width: '100%',
@@ -37,7 +35,6 @@ interface LocationData {
 }
 
 export default function SetupLocationPage() {
-  const { user, loading: authLoading } = useAuth()
   const [locationData, setLocationData] = useState<LocationData>({
     address: '',
     city: '',
@@ -55,55 +52,43 @@ export default function SetupLocationPage() {
   const [gettingLocation, setGettingLocation] = useState(false)
   const [suggestions, setSuggestions] = useState<any[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [showAuthLoading, setShowAuthLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const router = useRouter()
+  const supabase = createClient()
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
   const hasValidApiKey = apiKey && apiKey !== 'your_api_key_here'
 
-  // Only redirect if we're sure the user is not authenticated (give auth time to load)
+  // Simple user check with retry - don't redirect, just check for session
   useEffect(() => {
-    // Wait longer before redirecting to allow auth context to initialize
-    const timer = setTimeout(() => {
-      if (!authLoading && !user) {
-        console.log('❌ No user found after extended delay, redirecting to signin')
-        toast.error('Authentication required. Please sign in.')
-        router.push('/auth/signin')
-      }
-    }, 15000) // Wait 15 seconds before redirecting
+    let retryCount = 0
+    const maxRetries = 3
+    const retryDelay = 1000 // 1 second
     
-    return () => clearTimeout(timer)
-  }, [user, authLoading, router])
-
-  // Control when to show auth loading
-  useEffect(() => {
-    if (authLoading) {
-      const timer = setTimeout(() => {
-        setShowAuthLoading(false)
-        console.log('⏰ Auth loading timeout, rendering page anyway...')
-      }, 5000)
-      return () => clearTimeout(timer)
-    } else {
-      setShowAuthLoading(false)
+    const checkUser = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user) {
+          setCurrentUser(session.user)
+          console.log('✅ User session found:', session.user.email)
+        } else if (retryCount < maxRetries) {
+          console.log(`⚠️ No session found - retry ${retryCount + 1}/${maxRetries} in ${retryDelay}ms`)
+          retryCount++
+          setTimeout(checkUser, retryDelay)
+        } else {
+          console.log('⚠️ No session found after retries - user can still use the page')
+        }
+      } catch (error) {
+        console.error('Session check error:', error)
+        if (retryCount < maxRetries) {
+          retryCount++
+          setTimeout(checkUser, retryDelay)
+        }
+      }
     }
-  }, [authLoading])
-
-  // Show loading only briefly, then allow page to render
-  if (authLoading && !user && showAuthLoading) {
-    return (
-      <AuthLayout
-        title="Loading..."
-        subtitle="Please wait while we authenticate you"
-      >
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          <span className="ml-2">Loading...</span>
-        </div>
-      </AuthLayout>
-    )
-  }
-
-  // Allow the page to render even if no user (auth might still be loading)
+    
+    checkUser()
+  }, [])
 
   // Debounce search for autocomplete
   useEffect(() => {
@@ -204,7 +189,7 @@ export default function SetupLocationPage() {
     toast.success('Location selected!')
   }
 
-  // Simple search using Places API (New)
+  // Simple search using Places API
   const searchLocation = async () => {
     if (!locationData.address.trim()) {
       toast.error('Please enter an address to search')
@@ -276,6 +261,7 @@ export default function SetupLocationPage() {
       setGettingLocation(false)
     }
   }
+
 
   // Handle map click to place marker
   const onMapClick = useCallback((event: google.maps.MapMouseEvent) => {
@@ -408,7 +394,7 @@ export default function SetupLocationPage() {
       return
     }
 
-    if (!user) {
+    if (!currentUser) {
       toast.error('Authentication required')
       router.push('/auth/signin')
       return

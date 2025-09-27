@@ -35,142 +35,46 @@ export default function AuthCallbackPage() {
         
         console.log('🏢 Parsed institution data:', institutionData)
         
-        // Set session FIRST to ensure user is authenticated
-        console.log('🔐 Setting session before API call...')
+        // For new signups, just redirect to setup-location to let them continue
+        console.log('🚀 New signup detected, redirecting to setup-location')
+        setStatus('Setting up your account...')
+        toast.success('Email verified! Setting up your location...')
+        
+        // Set the session from URL tokens first
         try {
-          // Get the tokens from the current auth context
           const hashParams = new URLSearchParams(window.location.hash.substring(1))
-          const urlParams = new URLSearchParams(window.location.search)
-          const accessToken = hashParams.get('access_token') || urlParams.get('access_token')
-          const refreshToken = hashParams.get('refresh_token') || urlParams.get('refresh_token')
+          const accessToken = hashParams.get('access_token')
+          const refreshToken = hashParams.get('refresh_token')
           
           if (accessToken && refreshToken) {
-            const { data, error } = await supabase.auth.setSession({
+            console.log('🔑 Setting session with tokens (non-blocking)...')
+            const setSessionPromise = supabase.auth.setSession({
               access_token: accessToken,
               refresh_token: refreshToken
             })
+
+            // Race with a short timeout so we don't block redirect
+            const TIMEOUT_MS = 1000
+            await Promise.race([
+              setSessionPromise.then(() => console.log('✅ Session set from callback tokens (completed before timeout)')),
+              new Promise((resolve) => setTimeout(() => {
+                console.warn('⏱️ setSession taking too long; proceeding with redirect')
+                resolve(null)
+              }, TIMEOUT_MS))
+            ])
             
-            if (error) {
-              console.error('❌ Pre-API session set error:', error)
-            } else {
-              console.log('✅ Pre-API session set successfully')
-            }
+            // Immediately redirect regardless
+            console.log('🔄 Immediate redirect to setup-location...')
+            window.location.replace('/setup-location')
+            return
           }
-        } catch (preSessionError) {
-          console.error('❌ Pre-API session setting failed:', preSessionError)
+        } catch (error) {
+          console.warn('⚠️ Session setting failed, but continuing with redirect:', error)
         }
         
-        // Call complete-setup API
-        console.log('🔄 Calling complete-setup API...')
-        console.log('🔄 API payload:', {
-          userId: user.id,
-          institutionData
-        })
-        
-        const response = await fetch('/api/auth/complete-setup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user.id,
-            institutionData
-          })
-        })
-        
-        console.log('📍 Setup API response status:', response.status)
-        const result = await response.json()
-        console.log('📍 Setup API result:', result)
-        console.log('📍 Response OK check:', response.ok)
-        
-        if (!response.ok) {
-          console.error('❌ Setup completion failed:', result.error)
-          setStatus(`Setup failed: ${result.error}`)
-          toast.error(result.error || 'Failed to complete setup')
-          console.log('❌ Redirecting to signin due to API error')
-          setTimeout(() => router.push('/auth/signin'), 3000)
-          return
-        } else {
-          console.log('✅ API call successful, proceeding with setup completion')
-        }
-        
-        console.log('✅ Setup completed successfully')
-        
-        // Check if API specified a redirect path
-        const redirectPath = result.redirect || '/setup-location'
-        console.log('📍 API redirect suggestion:', result.redirect)
-        console.log('📍 Final redirect path determined:', redirectPath)
-        
-        // TEMPORARY: Try immediate redirect for testing
-        console.log('🚀 TESTING: Attempting immediate redirect...')
-        window.location.href = redirectPath
-        
-        if (redirectPath === '/dashboard') {
-          setStatus('Account already set up! Redirecting to dashboard...')
-          toast.success('Welcome back!')
-        } else {
-          setStatus('Setup complete! Redirecting to location setup...')
-          toast.success('Institution created successfully!')
-        }
-        
-        // Set the session in Supabase before redirect to maintain auth state
-        console.log('🔐 Setting Supabase session before redirect...')
-        try {
-          // Get the tokens from URL
-          const hashParams = new URLSearchParams(window.location.hash.substring(1))
-          const urlParams = new URLSearchParams(window.location.search)
-          const accessToken = hashParams.get('access_token') || urlParams.get('access_token')
-          const refreshToken = hashParams.get('refresh_token') || urlParams.get('refresh_token')
-          
-          console.log('🔑 Tokens available:', {
-            hasAccessToken: !!accessToken,
-            hasRefreshToken: !!refreshToken,
-            accessTokenLength: accessToken?.length,
-            refreshTokenLength: refreshToken?.length
-          })
-          
-          if (accessToken && refreshToken) {
-            console.log('🔄 Attempting to set session...')
-            // Set the session explicitly with timeout
-            try {
-              const sessionPromise = supabase.auth.setSession({
-                access_token: accessToken,
-                refresh_token: refreshToken
-              })
-              
-              // Add timeout to prevent hanging
-              const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Session timeout')), 5000)
-              )
-              
-              const { data, error } = await Promise.race([sessionPromise, timeoutPromise]) as any
-              
-              if (error) {
-                console.error('❌ Session set error:', error)
-              } else {
-                console.log('✅ Session set successfully:', {
-                  hasUser: !!data?.user,
-                  hasSession: !!data?.session,
-                  userEmail: data?.user?.email
-                })
-              }
-            } catch (sessionError) {
-              console.error('❌ Session setting timed out or failed:', sessionError)
-            }
-          } else {
-            console.warn('⚠️ Missing tokens for session setup')
-          }
-        } catch (sessionError) {
-          console.error('❌ Failed to set session:', sessionError)
-        }
-        
-        // Always redirect regardless of session setting result
-        console.log('🔄 Preparing redirect to:', redirectPath)
-        
-        // Redirect based on API response - use window.location to bypass middleware
-        setTimeout(() => {
-          console.log('🔄 Redirecting to:', redirectPath)
-          console.log('🌐 Using window.location.href for direct navigation')
-          window.location.href = redirectPath
-        }, 2000)
+        // Fallback redirect if session setting failed or timed out
+        console.log('🔄 Fallback redirect to setup-location...')
+        window.location.replace('/setup-location')
       } else {
         console.log('⚠️ No pending institution data found!')
         console.log('📊 User metadata keys:', Object.keys(user.user_metadata || {}))
