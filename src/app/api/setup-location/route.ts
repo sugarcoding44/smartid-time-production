@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,13 +55,19 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('✅ Authenticated user:', user.email)
+    
+    // Create service role client for admin operations (same as complete-setup)
+    const serviceSupabase = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
     // Get user info including institution_id  
     console.log('👥 Looking up user in database with ID:', user.id)
-    const { data: userData, error: userError } = await supabase
+    const { data: userData, error: userError } = await serviceSupabase
       .from('users')
       .select('id, institution_id, full_name, email')
-      .eq('auth_user_id', user.id)  // Changed from 'id' to 'auth_user_id'
+      .eq('auth_user_id', user.id)
       .single()
 
     console.log('👥 User lookup result:', {
@@ -84,7 +91,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if location already exists for this institution
-    const { data: existingLocation, error: checkError } = await supabase
+    console.log('🔍 Checking for existing location for institution:', userData.institution_id)
+    const { data: existingLocation, error: checkError } = await serviceSupabase
       .from('institution_locations')
       .select('id')
       .eq('institution_id', userData.institution_id)
@@ -115,13 +123,14 @@ export async function POST(request: NextRequest) {
       is_primary: true,
       is_active: true,
       location_status: 'verified',
-      created_by: user.id,
+      created_by: userData.id,
       notes: 'Location set during initial institution setup'
     }
 
     if (existingLocation) {
-      // Update existing location
-      const { data: updatedLocation, error: updateError } = await supabase
+      // Update existing location using service client
+      console.log('🔄 Updating existing location:', existingLocation.id)
+      const { data: updatedLocation, error: updateError } = await serviceSupabase
         .from('institution_locations')
         .update(locationData)
         .eq('id', existingLocation.id)
@@ -142,8 +151,9 @@ export async function POST(request: NextRequest) {
         location: updatedLocation
       })
     } else {
-      // Create new location
-      const { data: newLocation, error: insertError } = await supabase
+      // Create new location using service client
+      console.log('✨ Creating new location for institution:', userData.institution_id)
+      const { data: newLocation, error: insertError } = await serviceSupabase
         .from('institution_locations')
         .insert([locationData])
         .select()

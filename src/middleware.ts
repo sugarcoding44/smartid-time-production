@@ -66,12 +66,6 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Handle home page - always redirect to auth (don't auto-authenticate)
-  if (request.nextUrl.pathname === '/') {
-    console.log('🏠 Home page accessed - redirecting to auth')
-    return NextResponse.redirect(new URL('/auth', request.url))
-  }
-
   // Redirect authenticated users away from auth pages - but check setup status first
   if (request.nextUrl.pathname.startsWith('/auth') && user) {
     if (request.nextUrl.pathname !== '/auth/callback') {
