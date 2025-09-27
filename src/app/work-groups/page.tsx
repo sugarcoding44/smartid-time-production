@@ -155,15 +155,40 @@ export default function WorkGroupsPage() {
 
   const loadUsers = async (institutionId: string) => {
     try {
-      // Mock users data - in real implementation, fetch from /api/users
-      const mockUsers: User[] = [
-        { id: '1', full_name: 'John Doe', employee_id: 'TC001', primary_role: 'teacher', department: 'Mathematics' },
-        { id: '2', full_name: 'Jane Smith', employee_id: 'ST001', primary_role: 'staff', department: 'Administration' },
-        { id: '3', full_name: 'Bob Johnson', employee_id: 'SD001', primary_role: 'student', department: 'Grade 10' },
-        { id: '4', full_name: 'Alice Brown', employee_id: 'TC002', primary_role: 'teacher', department: 'Science' }
-      ]
+      console.log('👥 Loading users for institution:', institutionId)
+      const url = `/api/users?institution_id=${institutionId}`
+      console.log('🔗 Users API URL:', url)
       
-      setUsers(mockUsers)
+      const response = await fetch(url)
+      const result = await response.json()
+      
+      console.log('📊 Users API Response:', { 
+        status: response.status, 
+        ok: response.ok,
+        result 
+      })
+      
+      if (!response.ok) {
+        console.error('❌ Users response not OK:', response.status)
+        // Fallback to empty array instead of showing error
+        setUsers([])
+        return
+      }
+      
+      if (result.success && result.data) {
+        console.log('✅ Setting users:', result.data.length)
+        const formattedUsers = result.data.map((user: any) => ({
+          id: user.id,
+          full_name: user.full_name,
+          employee_id: user.employee_id,
+          primary_role: user.primary_role,
+          department: user.department
+        }))
+        setUsers(formattedUsers)
+      } else {
+        console.log('⚠️ No users data in response')
+        setUsers([])
+      }
     } catch (error) {
       console.error('Error loading users:', error)
       toast.error('Failed to load users')
