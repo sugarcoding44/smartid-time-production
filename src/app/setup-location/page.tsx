@@ -418,9 +418,21 @@ export default function SetupLocationPage() {
       let session = null
       
       console.log('🔍 Checking existing session...')
-      // Try to get existing session first
-      const { data: { session: existingSession } } = await supabase.auth.getSession()
-      console.log('🔍 Existing session result:', existingSession ? 'Found' : 'None')
+      // Try to get existing session first with timeout
+      let existingSession = null
+      try {
+        const sessionPromise = supabase.auth.getSession()
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session check timeout')), 5000)
+        )
+        
+        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise])
+        existingSession = session
+        console.log('🔍 Existing session result:', existingSession ? 'Found' : 'None')
+      } catch (sessionError) {
+        console.error('🔍 Session check error:', sessionError)
+        existingSession = null
+      }
       if (existingSession) {
         session = existingSession
         console.log('✅ Using existing session:', session.user.email)
@@ -453,6 +465,14 @@ export default function SetupLocationPage() {
           }
         } else {
           console.log('⚠️ No stored tokens available for session creation')
+          
+          // If we have no session and no tokens, user shouldn't be here
+          if (!existingSession && !authTokens.accessToken) {
+            console.log('❌ User has no authentication - likely accessed setup-location directly')
+            toast.error('Please complete the registration process first.')
+            router.push('/auth/signup')
+            return
+          }
         }
       }
       
