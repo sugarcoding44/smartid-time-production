@@ -70,7 +70,7 @@ export default function SetupLocationPage() {
         toast.error('Authentication required. Please sign in.')
         router.push('/auth/signin')
       }
-    }, 10000) // Wait 10 seconds before redirecting
+    }, 15000) // Wait 15 seconds before redirecting
     
     return () => clearTimeout(timer)
   }, [user, authLoading, router])
@@ -81,7 +81,7 @@ export default function SetupLocationPage() {
       const timer = setTimeout(() => {
         setShowAuthLoading(false)
         console.log('⏰ Auth loading timeout, rendering page anyway...')
-      }, 3000)
+      }, 5000)
       return () => clearTimeout(timer)
     } else {
       setShowAuthLoading(false)
