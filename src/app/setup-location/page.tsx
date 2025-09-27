@@ -52,82 +52,34 @@ export default function SetupLocationPage() {
   const [gettingLocation, setGettingLocation] = useState(false)
   const [suggestions, setSuggestions] = useState<any[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  // Removed currentUser state - not needed since middleware handles auth
   const router = useRouter()
   const supabase = createClient()
   
-  // Get URL search params to check for tokens
-  const [searchParams] = useState(() => {
+  // Store URL tokens before cleaning URL
+  const [authTokens] = useState(() => {
     if (typeof window !== 'undefined') {
-      return new URLSearchParams(window.location.search)
+      const urlParams = new URLSearchParams(window.location.search)
+      const hashParams = new URLSearchParams(window.location.hash.substring(1))
+      return {
+        accessToken: urlParams.get('access_token') || hashParams.get('access_token'),
+        refreshToken: urlParams.get('refresh_token') || hashParams.get('refresh_token')
+      }
     }
-    return new URLSearchParams()
+    return { accessToken: null, refreshToken: null }
   })
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
   const hasValidApiKey = apiKey && apiKey !== 'your_api_key_here'
 
-  // Simple user check with retry - don't redirect, just check for session
+  // Clean up URL tokens on load to remove them from address bar
   useEffect(() => {
-    let retryCount = 0
-    const maxRetries = 5
-    const retryDelay = 1000 // 1 second
-    
-    const checkUser = async () => {
-      try {
-        // First try to get existing session
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session?.user) {
-          setCurrentUser(session.user)
-          console.log('✅ User session found:', session.user.email)
-          return
-        }
-        
-        // If no session, try to set it from URL tokens
-        const accessToken = searchParams.get('access_token')
-        const refreshToken = searchParams.get('refresh_token')
-        
-        if (accessToken && refreshToken && retryCount === 0) {
-          console.log('🔑 Setting session from URL tokens...')
-          try {
-            const { data, error } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken
-            })
-            
-            if (data.session?.user && !error) {
-              setCurrentUser(data.session.user)
-              console.log('✅ Session set from URL tokens:', data.session.user.email)
-              // Clean URL
-              window.history.replaceState({}, '', '/setup-location')
-              return
-            } else {
-              console.error('Session setting from URL failed:', error)
-            }
-          } catch (tokenError) {
-            console.error('Token session error:', tokenError)
-          }
-        }
-        
-        // Retry logic
-        if (retryCount < maxRetries) {
-          console.log(`⚠️ No session found - retry ${retryCount + 1}/${maxRetries} in ${retryDelay}ms`)
-          retryCount++
-          setTimeout(checkUser, retryDelay)
-        } else {
-          console.log('⚠️ No session found after retries - user can still use the page')
-        }
-      } catch (error) {
-        console.error('Session check error:', error)
-        if (retryCount < maxRetries) {
-          retryCount++
-          setTimeout(checkUser, retryDelay)
-        }
-      }
+    if (typeof window !== 'undefined' && (authTokens.accessToken || authTokens.refreshToken)) {
+      console.log('🧺 Cleaning URL tokens from address bar (tokens stored)')
+      // Clean URL now that we have stored the tokens
+      window.history.replaceState({}, '', '/setup-location')
     }
-    
-    checkUser()
-  }, [searchParams, supabase.auth])
+  }, [])
 
   // Debounce search for autocomplete
   useEffect(() => {
@@ -424,7 +376,6 @@ export default function SetupLocationPage() {
     e.preventDefault()
 
     console.log('💾 Form submission started')
-    console.log('👤 Current user state:', currentUser)
     console.log('📍 Location data:', {
       latitude: locationData.latitude,
       longitude: locationData.longitude,
@@ -447,12 +398,41 @@ export default function SetupLocationPage() {
     setLoading(true)
 
     try {
-      // Get session token
+      // Get session token with retry logic
       const supabase = (await import('@/lib/supabase/client')).createClient()
-      const { data: { session } } = await supabase.auth.getSession()
+      let session = null
+      
+      // Try to get existing session first
+      const { data: { session: existingSession } } = await supabase.auth.getSession()
+      if (existingSession) {
+        session = existingSession
+        console.log('✅ Using existing session:', session.user.email)
+      } else {
+        // If no session, try to set from stored tokens if they exist
+        const { accessToken, refreshToken } = authTokens
+        
+        if (accessToken && refreshToken) {
+          console.log('🔑 Setting session from URL tokens for API call...')
+          try {
+            const { data, error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            })
+            
+            if (data.session && !error) {
+              session = data.session
+              console.log('✅ Session set from URL tokens for API:', session.user.email)
+            } else {
+              console.error('Failed to set session from tokens:', error)
+            }
+          } catch (tokenError) {
+            console.error('Token session error:', tokenError)
+          }
+        }
+      }
       
       if (!session) {
-        toast.error('Session expired. Please log in again.')
+        toast.error('Authentication required. Please sign in again.')
         router.push('/auth/signin')
         return
       }
