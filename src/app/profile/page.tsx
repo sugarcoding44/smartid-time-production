@@ -119,8 +119,25 @@ export default function ProfilePage() {
       const debugResponse = await fetch('/api/debug/supabase')
       const debugData = await debugResponse.json()
       
+      // Get the actual authenticated user ID
+      const authTest = debugData.tests.find((t: any) => t.name === 'Auth Session')
+      const currentAuthUserId = authTest?.data?.userId
+      
+      if (!currentAuthUserId) {
+        toast.error('Authentication required')
+        return
+      }
+      
+      // Find the actual current user from service test data
       const serviceTest = debugData.tests.find((t: any) => t.name === 'Service Role Client')
-      const currentUser = serviceTest?.data?.[0]
+      const allUsers = serviceTest?.data || []
+      
+      let currentUser = allUsers.find((u: any) => u.auth_user_id === currentAuthUserId)
+      if (!currentUser) {
+        currentUser = allUsers.find((u: any) => u.id === currentAuthUserId)
+      }
+      
+      console.log('👤 Found current user for Profile Settings:', currentUser)
       
       if (currentUser) {
         // Set admin profile from debug data

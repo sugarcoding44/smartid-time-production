@@ -83,15 +83,35 @@ export default function WorkGroupsPage() {
       
       console.log('🐛 Debug response:', debugData)
       
-      const serviceTest = debugData.tests.find((t: any) => t.name === 'Service Role Client')
-      console.log('🔍 Service test:', serviceTest)
+      // Get the actual authenticated user ID
+      const authTest = debugData.tests.find((t: any) => t.name === 'Auth Session')
+      const currentAuthUserId = authTest?.data?.userId
       
-      const user = serviceTest?.success && serviceTest.data?.length > 0 ? {
-        id: serviceTest.data[0].id,
-        name: serviceTest.data[0].name,
-        email: serviceTest.data[0].email,
-        institution_id: serviceTest.data[0].institution_id,
-        primary_role: serviceTest.data[0].primary_role
+      console.log('🔍 Auth user ID:', currentAuthUserId)
+      
+      if (!currentAuthUserId) {
+        toast.error('Authentication required')
+        return
+      }
+      
+      // Find the actual current user from service test data
+      const serviceTest = debugData.tests.find((t: any) => t.name === 'Service Role Client')
+      const allUsers = serviceTest?.data || []
+      
+      // Try to match by the user's auth_user_id field or the id field
+      let foundUser = allUsers.find((u: any) => u.auth_user_id === currentAuthUserId)
+      if (!foundUser) {
+        foundUser = allUsers.find((u: any) => u.id === currentAuthUserId)
+      }
+      
+      console.log('👤 Found current user for Work Groups:', foundUser)
+      
+      const user = foundUser ? {
+        id: foundUser.id,
+        name: foundUser.name,
+        email: foundUser.email,
+        institution_id: foundUser.institution_id,
+        primary_role: foundUser.primary_role
       } : null
       
       console.log('👤 Extracted user:', user)

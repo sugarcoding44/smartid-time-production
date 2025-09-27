@@ -345,8 +345,25 @@ export default function HolidaysPage() {
       const debugResponse = await fetch('/api/debug/supabase')
       const debugData = await debugResponse.json()
       
+      // Get the actual authenticated user ID
+      const authTest = debugData.tests.find((t: any) => t.name === 'Auth Session')
+      const currentAuthUserId = authTest?.data?.userId
+      
+      if (!currentAuthUserId) {
+        toast.error('Authentication required')
+        return
+      }
+      
+      // Find the actual current user from service test data
       const serviceTest = debugData.tests.find((t: any) => t.name === 'Service Role Client')
-      const user = serviceTest?.data?.[0]
+      const allUsers = serviceTest?.data || []
+      
+      let user = allUsers.find((u: any) => u.auth_user_id === currentAuthUserId)
+      if (!user) {
+        user = allUsers.find((u: any) => u.id === currentAuthUserId)
+      }
+      
+      console.log('👤 Found current user for Holidays:', user)
       
       if (user) {
         setCurrentUser(user)

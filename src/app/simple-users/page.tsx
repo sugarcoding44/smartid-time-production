@@ -94,6 +94,17 @@ export default function SimpleUserManagementPage() {
       console.log('🔍 All users from service test:', allUsers)
       console.log('🔍 Looking for user with auth ID:', currentAuthUserId)
       
+      // Log each user in detail
+      allUsers.forEach((user: any, index: number) => {
+        console.log(`👥 User ${index}:`, {
+          id: user.id,
+          auth_user_id: user.auth_user_id,
+          name: user.name,
+          email: user.email,
+          institution_id: user.institution_id
+        })
+      })
+      
       // Try to match by the user's auth_user_id field or the id field
       let currentUser = allUsers.find((u: any) => u.auth_user_id === currentAuthUserId)
       if (!currentUser) {
