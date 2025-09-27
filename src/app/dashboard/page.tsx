@@ -10,6 +10,7 @@ import { QuickAddUserModal } from '@/components/features/quick-add-user-modal'
 import { QuickUserModal } from '@/components/features/quick-user-modal'
 import { PalmEnrollmentModal } from '@/components/features/palm-enrollment-modal'
 import { CardIssuanceModal } from '@/components/features/card-issuance-modal'
+import { useAuth } from '@/contexts/auth-context'
 
 // Sample data - using the same as the original
 const stats = [
@@ -34,8 +35,7 @@ const progressData = [
 ]
 
 export default function DashboardPage() {
-  const [userInfo, setUserInfo] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const { user, profile, loading } = useAuth()
   
   // Quick action modal states
   const [showAddUserModal, setShowAddUserModal] = useState(false)
@@ -44,35 +44,6 @@ export default function DashboardPage() {
   const [showPalmEnrollModal, setShowPalmEnrollModal] = useState(false)
   const [showCardIssueModal, setShowCardIssueModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState<any>(null)
-
-  useEffect(() => {
-    // Get user info from the working debug endpoint
-    const fetchUserInfo = async () => {
-      try {
-        const response = await fetch('/api/debug/supabase')
-        const data = await response.json()
-        
-        // Extract user info from the working service role test
-        const serviceTest = data.tests.find((t: any) => t.name === 'Service Role Client')
-        const authTest = data.tests.find((t: any) => t.name === 'Auth Session')
-        
-        if (serviceTest?.success && serviceTest.data?.length > 0) {
-          setUserInfo({
-            name: serviceTest.data[0].name,
-            email: serviceTest.data[0].email,
-            id: serviceTest.data[0].id,
-            hasAuth: authTest?.success && authTest.data?.hasSession
-          })
-        }
-      } catch (error) {
-        console.error('Error fetching user info:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchUserInfo()
-  }, [])
 
   // Quick action handlers
   const handlePalmUserSelect = (user: any) => {
@@ -119,7 +90,7 @@ export default function DashboardPage() {
         <div className="bg-white dark:bg-gradient-to-br dark:from-violet-900 dark:to-purple-900 rounded-2xl p-6 border-0 shadow-lg dark:border dark:border-purple-800/50">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Welcome back, {loading ? '...' : (userInfo?.name || 'Admin')} 👋</h1>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Welcome back, {loading ? '...' : (profile?.full_name || user?.email?.split('@')[0] || 'Admin')} 👋</h1>
               <p className="text-gray-600 dark:text-purple-200/90">Institution Admin • {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
             </div>
             <div className="flex gap-8 mt-4 lg:mt-0">
