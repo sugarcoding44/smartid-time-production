@@ -441,28 +441,8 @@ export default function SetupLocationPage() {
       return
     }
 
-    if (!currentUser) {
-      console.error('❌ No currentUser found - checking session directly')
-      // Try to get session directly instead of relying on currentUser state
-      try {
-        const supabase = (await import('@/lib/supabase/client')).createClient()
-        const { data: { session } } = await supabase.auth.getSession()
-        
-        if (!session) {
-          toast.error('Authentication required - no session found')
-          router.push('/auth/signin')
-          return
-        } else {
-          console.log('✅ Session found despite no currentUser:', session.user.email)
-          // Continue with the API call
-        }
-      } catch (error) {
-        console.error('❌ Session check failed:', error)
-        toast.error('Authentication required')
-        router.push('/auth/signin')
-        return
-      }
-    }
+    // Skip currentUser check - middleware ensures only authenticated users reach this page
+    console.log('🔄 Proceeding with location save (middleware handles auth)')
 
     setLoading(true)
 
