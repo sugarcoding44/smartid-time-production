@@ -429,14 +429,22 @@ export default function SetupLocationPage() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          toast.error('Session expired. Please log in again.')
-          router.push('/auth/signin')
+          console.log('🔒 Authentication required - user needs to sign in')
+          if (result.needsSignIn) {
+            toast.success('Registration complete! Please sign in to save your location.')
+            router.push('/auth/signin')
+          } else {
+            toast.error('Session expired. Please log in again.')
+            router.push('/auth/signin')
+          }
           return
         }
+        console.error('❌ API error:', result)
         toast.error(result.error || 'Failed to save location')
         return
       }
 
+      console.log('✅ Location saved successfully!')
       toast.success('Institution location saved successfully!')
       router.push('/auth/welcome')
     } catch (error) {

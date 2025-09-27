@@ -42,14 +42,22 @@ export async function POST(request: NextRequest) {
     
     console.log('🔐 Auth check result:', {
       hasUser: !!user,
+      userId: user?.id,
       userEmail: user?.email,
-      authError: authError?.message
+      authError: authError?.message,
+      userMetadata: user?.user_metadata
     })
     
     if (authError || !user) {
       console.error('❌ Authentication error:', authError)
+      console.error('This likely means user completed registration but is not signed in')
       return NextResponse.json(
-        { error: 'Authentication required', details: authError?.message },
+        { 
+          error: 'Authentication required', 
+          details: authError?.message,
+          needsSignIn: true,
+          message: 'Please sign in to save your institution location'
+        },
         { status: 401 }
       )
     }
