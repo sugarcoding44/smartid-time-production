@@ -84,15 +84,20 @@ export default function SimpleUserManagementPage() {
         return
       }
       
-      // For this demo, we'll use a mock institution ID since we know the current user
-      // In a real scenario, this would come from the user's profile
-      const mockInstitutionId = 'e808b0a5-af6b-4905-b3c1-f93d327a2559' // From your debug data
-      setInstitutionId(mockInstitutionId)
+      console.log('🔍 Simple Users - Current user:', currentUser)
+      console.log('🏢 Simple Users - Institution ID:', currentUser.institution_id)
+      
+      if (!currentUser.institution_id) {
+        toast.error('User is not associated with any institution')
+        return
+      }
+      
+      setInstitutionId(currentUser.institution_id)
       
       // Fetch users using the API endpoint
       await Promise.all([
-        fetchUsers(mockInstitutionId),
-        fetchWorkGroups(mockInstitutionId)
+        fetchUsers(currentUser.institution_id),
+        fetchWorkGroups(currentUser.institution_id)
       ])
       
     } catch (error) {
