@@ -95,20 +95,25 @@ export default function UserManagementPage() {
       const debugData = await debugResponse.json()
       
       const authTest = debugData.tests.find((t: any) => t.name === 'Auth Session')
-      const currentUserId = authTest?.data?.userId
+      const currentAuthUserId = authTest?.data?.userId
       
-      if (!currentUserId) {
+      if (!currentAuthUserId) {
         toast.error('Authentication error: Please sign in again')
         setLoading(false)
         return
       }
 
-      // Get the current user's institution_id from users table
+      console.log('🔍 Current auth user ID:', currentAuthUserId)
+
+      // Get the current user's institution_id from users table using auth_user_id
       const { data: currentUser, error: userError } = await supabase
         .from('users')
-        .select('institution_id')
-        .eq('id', currentUserId)
+        .select('institution_id, full_name, id')
+        .eq('auth_user_id', currentAuthUserId)
         .single()
+
+      console.log('🔍 Current user lookup result:', currentUser)
+      console.log('🔍 User error:', userError)
 
       if (userError || !currentUser?.institution_id) {
         toast.error('Institution not found. Please contact administrator.')
@@ -116,6 +121,8 @@ export default function UserManagementPage() {
         setLoading(false)
         return
       }
+
+      console.log('🏢 Fetching users for institution:', currentUser.institution_id)
 
       // Fetch users from the same institution
       const { data, error } = await supabase
@@ -187,18 +194,18 @@ export default function UserManagementPage() {
       const debugData = await debugResponse.json()
       
       const authTest = debugData.tests.find((t: any) => t.name === 'Auth Session')
-      const currentUserId = authTest?.data?.userId
+      const currentAuthUserId = authTest?.data?.userId
       
-      if (!currentUserId) {
+      if (!currentAuthUserId) {
         toast.error('Authentication error: Please sign in again')
         return
       }
 
-      // Get the current user's institution_id
+      // Get the current user's institution_id using auth_user_id
       const { data: currentUser, error: userError } = await supabase
         .from('users')
         .select('institution_id')
-        .eq('id', currentUserId)
+        .eq('auth_user_id', currentAuthUserId)
         .single()
 
       if (userError || !currentUser?.institution_id) {
