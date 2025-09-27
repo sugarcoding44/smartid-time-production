@@ -76,22 +76,32 @@ export default function AuthCallbackPage() {
           })
         })
         
-        console.log('📡 Setup API response status:', response.status)
+        console.log('📍 Setup API response status:', response.status)
         const result = await response.json()
-        console.log('📡 Setup API result:', result)
+        console.log('📍 Setup API result:', result)
+        console.log('📍 Response OK check:', response.ok)
         
         if (!response.ok) {
           console.error('❌ Setup completion failed:', result.error)
           setStatus(`Setup failed: ${result.error}`)
           toast.error(result.error || 'Failed to complete setup')
+          console.log('❌ Redirecting to signin due to API error')
           setTimeout(() => router.push('/auth/signin'), 3000)
           return
+        } else {
+          console.log('✅ API call successful, proceeding with setup completion')
         }
         
         console.log('✅ Setup completed successfully')
         
         // Check if API specified a redirect path
         const redirectPath = result.redirect || '/setup-location'
+        console.log('📍 API redirect suggestion:', result.redirect)
+        console.log('📍 Final redirect path determined:', redirectPath)
+        
+        // TEMPORARY: Try immediate redirect for testing
+        console.log('🚀 TESTING: Attempting immediate redirect...')
+        window.location.href = redirectPath
         
         if (redirectPath === '/dashboard') {
           setStatus('Account already set up! Redirecting to dashboard...')
