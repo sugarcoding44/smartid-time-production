@@ -61,10 +61,23 @@ export default function SetupLocationPage() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search)
       const hashParams = new URLSearchParams(window.location.hash.substring(1))
-      return {
+      
+      console.log('🔍 Current URL for token extraction:')
+      console.log('  - Search:', window.location.search)
+      console.log('  - Hash:', window.location.hash)
+      
+      const tokens = {
         accessToken: urlParams.get('access_token') || hashParams.get('access_token'),
         refreshToken: urlParams.get('refresh_token') || hashParams.get('refresh_token')
       }
+      
+      console.log('🔍 Extracted tokens:', {
+        hasAccessToken: !!tokens.accessToken,
+        hasRefreshToken: !!tokens.refreshToken,
+        accessTokenPreview: tokens.accessToken ? tokens.accessToken.substring(0, 20) + '...' : 'none'
+      })
+      
+      return tokens
     }
     return { accessToken: null, refreshToken: null }
   })
@@ -399,17 +412,27 @@ export default function SetupLocationPage() {
 
     try {
       // Get session token with retry logic
+      console.log('🔍 Debug: authTokens state:', authTokens)
+      
       const supabase = (await import('@/lib/supabase/client')).createClient()
       let session = null
       
+      console.log('🔍 Checking existing session...')
       // Try to get existing session first
       const { data: { session: existingSession } } = await supabase.auth.getSession()
+      console.log('🔍 Existing session result:', existingSession ? 'Found' : 'None')
       if (existingSession) {
         session = existingSession
         console.log('✅ Using existing session:', session.user.email)
       } else {
         // If no session, try to set from stored tokens if they exist
+        console.log('🔍 No existing session, checking stored tokens...')
         const { accessToken, refreshToken } = authTokens
+        console.log('🔍 Stored tokens:', { 
+          hasAccessToken: !!accessToken, 
+          hasRefreshToken: !!refreshToken,
+          accessTokenLength: accessToken ? accessToken.length : 0
+        })
         
         if (accessToken && refreshToken) {
           console.log('🔑 Setting session from URL tokens for API call...')
@@ -428,15 +451,19 @@ export default function SetupLocationPage() {
           } catch (tokenError) {
             console.error('Token session error:', tokenError)
           }
+        } else {
+          console.log('⚠️ No stored tokens available for session creation')
         }
       }
       
       if (!session) {
+        console.log('❌ No session available - redirecting to signin')
         toast.error('Authentication required. Please sign in again.')
         router.push('/auth/signin')
         return
       }
 
+      console.log('🎆 Making API call to setup-location...')
       const response = await fetch('/api/setup-location', {
         method: 'POST',
         headers: { 
@@ -447,7 +474,9 @@ export default function SetupLocationPage() {
         body: JSON.stringify(locationData)
       })
 
+      console.log('📊 API response status:', response.status)
       const result = await response.json()
+      console.log('📊 API response data:', result)
 
       if (!response.ok) {
         if (response.status === 401) {
