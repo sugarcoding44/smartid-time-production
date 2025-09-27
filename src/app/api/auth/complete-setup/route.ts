@@ -108,17 +108,16 @@ export async function POST(request: NextRequest) {
     const { error: profileError } = await serviceSupabase
       .from('users')
       .insert({
+        id: userId,
         auth_user_id: userId,
         institution_id: institution.id,
         full_name: institutionData.contact_person,
         email: institutionData.email,
-        primary_role: 'admin',
-        primary_system: 'hub_web',
-        smartid_hub_role: 'admin',
+        role: 'admin',
         employee_id: `ADM${Date.now()}`,
-        ic_number: institutionData.admin_ic_number,
-        phone: '+60123456789', // Placeholder
-        status: 'active'
+        status: 'active',
+        is_admin: true,
+        primary_system: 'smartid-hub'
       })
 
     if (profileError) {

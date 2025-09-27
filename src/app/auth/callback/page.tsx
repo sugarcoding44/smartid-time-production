@@ -35,10 +35,9 @@ export default function AuthCallbackPage() {
         
         console.log('🏢 Parsed institution data:', institutionData)
         
-        // For new signups, just redirect to setup-location to let them continue
-        console.log('🚀 New signup detected, redirecting to setup-location')
-        setStatus('Setting up your account...')
-        toast.success('Email verified! Setting up your location...')
+        // For new signups, call complete-setup API first
+        console.log('🚀 New signup detected, completing account setup...')
+        setStatus('Creating your institution and user account...')
         
         // Set the session from URL tokens first
         try {
@@ -47,34 +46,59 @@ export default function AuthCallbackPage() {
           const refreshToken = hashParams.get('refresh_token')
           
           if (accessToken && refreshToken) {
-            console.log('🔑 Setting session with tokens (non-blocking)...')
-            const setSessionPromise = supabase.auth.setSession({
+            console.log('🔑 Setting session with tokens...')
+            await supabase.auth.setSession({
               access_token: accessToken,
               refresh_token: refreshToken
             })
-
-            // Race with a short timeout so we don't block redirect
-            const TIMEOUT_MS = 1000
-            await Promise.race([
-              setSessionPromise.then(() => console.log('✅ Session set from callback tokens (completed before timeout)')),
-              new Promise((resolve) => setTimeout(() => {
-                console.warn('⏱️ setSession taking too long; proceeding with redirect')
-                resolve(null)
-              }, TIMEOUT_MS))
-            ])
-            
-            // Immediately redirect regardless
-            console.log('🔄 Immediate redirect to setup-location...')
-            window.location.replace('/setup-location')
-            return
+            console.log('✅ Session set successfully')
           }
         } catch (error) {
-          console.warn('⚠️ Session setting failed, but continuing with redirect:', error)
+          console.warn('⚠️ Session setting failed:', error)
         }
         
-        // Fallback redirect if session setting failed or timed out
-        console.log('🔄 Fallback redirect to setup-location...')
-        window.location.replace('/setup-location')
+        // Call complete-setup API to create institution and user records
+        try {
+          console.log('🔄 Calling complete-setup API...')
+          setStatus('Setting up your institution...')
+          
+          const setupResponse = await fetch('/api/auth/complete-setup', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId: user.id,
+              institutionData: institutionData
+            })
+          })
+          
+          const setupResult = await setupResponse.json()
+          console.log('📊 Setup API response:', setupResult)
+          
+          if (!setupResponse.ok) {
+            throw new Error(setupResult.error || 'Setup failed')
+          }
+          
+          // Check if we need to redirect somewhere specific
+          if (setupResult.redirect) {
+            console.log('🔄 Setup complete, redirecting to:', setupResult.redirect)
+            toast.success(setupResult.message || 'Setup completed!')
+            window.location.replace(setupResult.redirect)
+            return
+          }
+          
+          // Default: redirect to location setup
+          console.log('🔄 Setup complete, redirecting to setup-location...')
+          toast.success('Institution created! Now set up your location...')
+          window.location.replace('/setup-location')
+          
+        } catch (setupError) {
+          console.error('❌ Setup API failed:', setupError)
+          setStatus('Setup failed. Please try again.')
+          toast.error('Failed to complete setup: ' + (setupError as Error).message)
+          setTimeout(() => router.push('/auth/signin'), 3000)
+        }
       } else {
         console.log('⚠️ No pending institution data found!')
         console.log('📊 User metadata keys:', Object.keys(user.user_metadata || {}))
