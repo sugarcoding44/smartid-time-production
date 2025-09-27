@@ -1,15 +1,15 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    const supabase = createClient()
-
-    // Get current session to verify we're authenticated as admin
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
-    }
+    // Use service role client for admin access
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+    
+    console.log('🔍 Debug API called - checking users table...')
 
     // Query users table
     const { data: users, error: usersError } = await supabase
@@ -77,6 +77,19 @@ export async function GET() {
       }
     }
 
+    // Add specific lookup for our problematic user
+    const { data: problemUser } = await supabase
+      .from('users')
+      .select('*')
+      .eq('auth_user_id', '8c32a191-f40c-4766-92e0-f85602402692')
+      .maybeSingle()
+    
+    // Check for email conflicts
+    const { data: emailConflicts } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', 'nadia@pointgate.net')
+
     return NextResponse.json({
       users_table_count: users?.length || 0,
       auth_users_count: authUsers?.users?.length || 0,
@@ -88,9 +101,11 @@ export async function GET() {
         last_sign_in_at: u.last_sign_in_at
       })) || [],
       mismatches,
-      debug_info: {
-        current_session_user_id: session.user.id,
-        current_session_email: session.user.email
+      specific_debug: {
+        auth_id_lookup: problemUser,
+        email_conflicts: emailConflicts,
+        target_auth_id: '8c32a191-f40c-4766-92e0-f85602402692',
+        target_email: 'nadia@pointgate.net'
       }
     })
 
