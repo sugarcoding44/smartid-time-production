@@ -85,23 +85,56 @@ export default function AuthCallbackPage() {
           const accessToken = hashParams.get('access_token') || urlParams.get('access_token')
           const refreshToken = hashParams.get('refresh_token') || urlParams.get('refresh_token')
           
+          console.log('🔑 Tokens available:', {
+            hasAccessToken: !!accessToken,
+            hasRefreshToken: !!refreshToken,
+            accessTokenLength: accessToken?.length,
+            refreshTokenLength: refreshToken?.length
+          })
+          
           if (accessToken && refreshToken) {
-            // Set the session explicitly
-            await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken
-            })
-            console.log('✅ Session set successfully')
+            console.log('🔄 Attempting to set session...')
+            // Set the session explicitly with timeout
+            try {
+              const sessionPromise = supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken
+              })
+              
+              // Add timeout to prevent hanging
+              const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Session timeout')), 5000)
+              )
+              
+              const { data, error } = await Promise.race([sessionPromise, timeoutPromise]) as any
+              
+              if (error) {
+                console.error('❌ Session set error:', error)
+              } else {
+                console.log('✅ Session set successfully:', {
+                  hasUser: !!data?.user,
+                  hasSession: !!data?.session,
+                  userEmail: data?.user?.email
+                })
+              }
+            } catch (sessionError) {
+              console.error('❌ Session setting timed out or failed:', sessionError)
+            }
+          } else {
+            console.warn('⚠️ Missing tokens for session setup')
           }
         } catch (sessionError) {
           console.error('❌ Failed to set session:', sessionError)
         }
         
+        // Always redirect regardless of session setting result
+        console.log('🔄 Preparing redirect to:', redirectPath)
+        
         // Redirect based on API response
         setTimeout(() => {
           console.log('🔄 Redirecting to:', redirectPath)
           router.push(redirectPath)
-        }, 1500)
+        }, 2000)
       } else {
         console.log('⚠️ No pending institution data found!')
         console.log('📊 User metadata keys:', Object.keys(user.user_metadata || {}))

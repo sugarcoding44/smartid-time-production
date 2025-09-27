@@ -45,13 +45,31 @@ export async function POST(request: NextRequest) {
         .single()
       
       if (existingUser && !userCheckError) {
-        // User already exists, redirect to dashboard
-        console.log('User already set up, redirecting to dashboard')
-        return NextResponse.json({
-          success: true,
-          message: 'Account already set up',
-          redirect: '/dashboard'
-        })
+        // User already exists, check if they have location setup
+        console.log('User already set up, checking location setup...')
+        
+        // Check if institution has location data
+        const { data: institutionLocation, error: locationError } = await serviceSupabase
+          .from('institution_locations')
+          .select('id')
+          .eq('institution_id', existingInstitution.id)
+          .single()
+        
+        if (institutionLocation && !locationError) {
+          console.log('Location already set up, redirecting to dashboard')
+          return NextResponse.json({
+            success: true,
+            message: 'Account already set up',
+            redirect: '/dashboard'
+          })
+        } else {
+          console.log('No location setup found, redirecting to setup-location')
+          return NextResponse.json({
+            success: true,
+            message: 'Account set up, need location setup',
+            redirect: '/setup-location'
+          })
+        }
       }
       
       institution = existingInstitution
