@@ -41,9 +41,12 @@ export async function middleware(request: NextRequest) {
   })
 
   // Protected routes
-  if (request.nextUrl.pathname.startsWith('/dashboard')) {
+  const protectedRoutes = ['/dashboard', '/setup-location']
+  const isProtectedRoute = protectedRoutes.some(route => request.nextUrl.pathname.startsWith(route))
+  
+  if (isProtectedRoute) {
     if (!user) {
-      console.log('🚫 Redirecting to signin - no user for protected route')
+      console.log('😫 Redirecting to signin - no user for protected route')
       return NextResponse.redirect(new URL('/auth/signin', request.url))
     }
   }
