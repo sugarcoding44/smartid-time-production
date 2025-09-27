@@ -35,6 +35,31 @@ export default function AuthCallbackPage() {
         
         console.log('🏢 Parsed institution data:', institutionData)
         
+        // Set session FIRST to ensure user is authenticated
+        console.log('🔐 Setting session before API call...')
+        try {
+          // Get the tokens from the current auth context
+          const hashParams = new URLSearchParams(window.location.hash.substring(1))
+          const urlParams = new URLSearchParams(window.location.search)
+          const accessToken = hashParams.get('access_token') || urlParams.get('access_token')
+          const refreshToken = hashParams.get('refresh_token') || urlParams.get('refresh_token')
+          
+          if (accessToken && refreshToken) {
+            const { data, error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            })
+            
+            if (error) {
+              console.error('❌ Pre-API session set error:', error)
+            } else {
+              console.log('✅ Pre-API session set successfully')
+            }
+          }
+        } catch (preSessionError) {
+          console.error('❌ Pre-API session setting failed:', preSessionError)
+        }
+        
         // Call complete-setup API
         console.log('🔄 Calling complete-setup API...')
         console.log('🔄 API payload:', {
@@ -130,10 +155,11 @@ export default function AuthCallbackPage() {
         // Always redirect regardless of session setting result
         console.log('🔄 Preparing redirect to:', redirectPath)
         
-        // Redirect based on API response
+        // Redirect based on API response - use window.location to bypass middleware
         setTimeout(() => {
           console.log('🔄 Redirecting to:', redirectPath)
-          router.push(redirectPath)
+          console.log('🌐 Using window.location.href for direct navigation')
+          window.location.href = redirectPath
         }, 2000)
       } else {
         console.log('⚠️ No pending institution data found!')
