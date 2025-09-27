@@ -66,9 +66,37 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Redirect authenticated users away from auth pages
+  // Redirect authenticated users away from auth pages - but check setup status first
   if (request.nextUrl.pathname.startsWith('/auth') && user) {
     if (request.nextUrl.pathname !== '/auth/callback') {
+      // Check if user needs to complete setup (location)
+      try {
+        const { data: userRecord } = await supabase
+          .from('users')
+          .select('institution_id')
+          .eq('auth_user_id', user.id)
+          .single()
+        
+        if (userRecord?.institution_id) {
+          // Check if institution has location setup
+          const { data: locationExists } = await supabase
+            .from('institution_locations')
+            .select('id')
+            .eq('institution_id', userRecord.institution_id)
+            .limit(1)
+            .single()
+          
+          if (!locationExists) {
+            console.log('🔄 User authenticated but needs location setup - redirecting to setup-location')
+            return NextResponse.redirect(new URL('/setup-location', request.url))
+          }
+        } else {
+          console.log('⚠️ User authenticated but no user record found - may need account setup')
+        }
+      } catch (error) {
+        console.log('⚠️ Error checking setup status:', error)
+      }
+      
       console.log('🔄 Redirecting authenticated user to dashboard')
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
