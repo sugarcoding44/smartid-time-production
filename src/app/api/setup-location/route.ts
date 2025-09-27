@@ -10,7 +10,10 @@ export async function POST(request: NextRequest) {
       latitude: body.latitude,
       longitude: body.longitude,
       city: body.city,
-      state: body.state
+      state: body.state,
+      postalCode: body.postalCode,
+      country: body.country,
+      attendanceRadius: body.attendanceRadius
     })
     const {
       address,
@@ -36,8 +39,14 @@ export async function POST(request: NextRequest) {
     
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
+    console.log('🔐 Auth check result:', {
+      hasUser: !!user,
+      userEmail: user?.email,
+      authError: authError?.message
+    })
+    
     if (authError || !user) {
-      console.error('Authentication error:', authError)
+      console.error('❌ Authentication error:', authError)
       return NextResponse.json(
         { error: 'Authentication required', details: authError?.message },
         { status: 401 }
@@ -46,16 +55,23 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Authenticated user:', user.email)
 
-    // Get user info including institution_id
+    // Get user info including institution_id  
+    console.log('👥 Looking up user in database with ID:', user.id)
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('id, institution_id')
-      .eq('id', user.id)
+      .select('id, institution_id, full_name, email')
+      .eq('auth_user_id', user.id)  // Changed from 'id' to 'auth_user_id'
       .single()
 
+    console.log('👥 User lookup result:', {
+      userData,
+      userError: userError?.message
+    })
+
     if (userError || !userData) {
+      console.error('❌ User not found in database:', userError)
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: 'User not found in database', details: userError?.message },
         { status: 404 }
       )
     }
