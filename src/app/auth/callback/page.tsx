@@ -105,10 +105,10 @@ export default function AuthCallbackPage() {
             return
           }
           
-          // Default: redirect to sign-in for proper authentication
-          console.log('🔄 Setup complete, redirecting to sign-in...')
-          toast.success('Institution created! Please sign in to continue...')
-          window.location.replace('/auth/signin')
+          // Default: redirect to setup-location for location setup
+          console.log('🔄 Setup complete, redirecting to setup-location...')
+          toast.success('Institution created! Please set your location...')
+          window.location.replace('/setup-location')
           
         } catch (setupError) {
           console.error('❌ Setup API failed:', setupError)
