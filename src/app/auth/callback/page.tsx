@@ -64,13 +64,22 @@ export default function AuthCallbackPage() {
         }
         
         console.log('✅ Setup completed successfully')
-        setStatus('Setup complete! Redirecting to dashboard...')
-        toast.success('Institution created successfully!')
         
-        // Redirect to dashboard
+        // Check if API specified a redirect path
+        const redirectPath = result.redirect || '/setup-location'
+        
+        if (redirectPath === '/dashboard') {
+          setStatus('Account already set up! Redirecting to dashboard...')
+          toast.success('Welcome back!')
+        } else {
+          setStatus('Setup complete! Redirecting to location setup...')
+          toast.success('Institution created successfully!')
+        }
+        
+        // Redirect based on API response
         setTimeout(() => {
-          console.log('🔄 Redirecting to dashboard...')
-          router.push('/dashboard')
+          console.log('🔄 Redirecting to:', redirectPath)
+          router.push(redirectPath)
         }, 1500)
       } else {
         console.log('⚠️ No pending institution data found!')
