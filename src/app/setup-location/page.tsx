@@ -411,86 +411,15 @@ export default function SetupLocationPage() {
     setLoading(true)
 
     try {
-      // Get session token with retry logic
-      console.log('🔍 Debug: authTokens state:', authTokens)
+      // Simplified approach: Let middleware handle auth, API will use server-side session
+      console.log('🎆 Making API call to setup-location (middleware ensures auth)...')
       
-      const supabase = (await import('@/lib/supabase/client')).createClient()
-      let session = null
-      
-      console.log('🔍 Checking existing session...')
-      // Try to get existing session first with timeout
-      let existingSession = null
-      try {
-        const sessionPromise = supabase.auth.getSession()
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Session check timeout')), 5000)
-        )
-        
-        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise])
-        existingSession = session
-        console.log('🔍 Existing session result:', existingSession ? 'Found' : 'None')
-      } catch (sessionError) {
-        console.error('🔍 Session check error:', sessionError)
-        existingSession = null
-      }
-      if (existingSession) {
-        session = existingSession
-        console.log('✅ Using existing session:', session.user.email)
-      } else {
-        // If no session, try to set from stored tokens if they exist
-        console.log('🔍 No existing session, checking stored tokens...')
-        const { accessToken, refreshToken } = authTokens
-        console.log('🔍 Stored tokens:', { 
-          hasAccessToken: !!accessToken, 
-          hasRefreshToken: !!refreshToken,
-          accessTokenLength: accessToken ? accessToken.length : 0
-        })
-        
-        if (accessToken && refreshToken) {
-          console.log('🔑 Setting session from URL tokens for API call...')
-          try {
-            const { data, error } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken
-            })
-            
-            if (data.session && !error) {
-              session = data.session
-              console.log('✅ Session set from URL tokens for API:', session.user.email)
-            } else {
-              console.error('Failed to set session from tokens:', error)
-            }
-          } catch (tokenError) {
-            console.error('Token session error:', tokenError)
-          }
-        } else {
-          console.log('⚠️ No stored tokens available for session creation')
-          
-          // If we have no session and no tokens, user shouldn't be here
-          if (!existingSession && !authTokens.accessToken) {
-            console.log('❌ User has no authentication - likely accessed setup-location directly')
-            toast.error('Please complete the registration process first.')
-            router.push('/auth/signup')
-            return
-          }
-        }
-      }
-      
-      if (!session) {
-        console.log('❌ No session available - redirecting to signin')
-        toast.error('Authentication required. Please sign in again.')
-        router.push('/auth/signin')
-        return
-      }
-
-      console.log('🎆 Making API call to setup-location...')
       const response = await fetch('/api/setup-location', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
         },
-        credentials: 'include',
+        credentials: 'include', // This sends cookies with the request
         body: JSON.stringify(locationData)
       })
 
