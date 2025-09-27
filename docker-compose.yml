@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  # SmartID Registry (id.smartid.my)
+  smartid-registry:
+    build: .
+    container_name: smartid-registry
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - NEXT_PUBLIC_APP_URL=https://id.smartid.my
+    ports:
+      - "3001:3000"
+    networks:
+      - smartid-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: smartid-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./nginx/logs:/var/log/nginx
+    depends_on:
+      - smartid-registry
+    networks:
+      - smartid-network
+
+  # Future services (commented out for now)
+  
+  # smartid-pos:
+  #   build: ../smartid-pos
+  #   container_name: smartid-pos
+  #   restart: unless-stopped
+  #   environment:
+  #     - NODE_ENV=production
+  #     - NEXT_PUBLIC_APP_URL=https://pos.smartid.my
+  #   ports:
+  #     - "3002:3000"
+  #   networks:
+  #     - smartid-network
+
+  # smartid-pay:
+  #   build: ../smartid-pay
+  #   container_name: smartid-pay
+  #   restart: unless-stopped
+  #   environment:
+  #     - NODE_ENV=production
+  #     - NEXT_PUBLIC_APP_URL=https://pay.smartid.my
+  #   ports:
+  #     - "3003:3000"
+  #   networks:
+  #     - smartid-network
+
+  # smartid-time:
+  #   build: ../smartid-time
+  #   container_name: smartid-time
+  #   restart: unless-stopped
+  #   environment:
+  #     - NODE_ENV=production
+  #     - NEXT_PUBLIC_APP_URL=https://time.smartid.my
+  #   ports:
+  #     - "3004:3000"
+  #   networks:
+  #     - smartid-network
+
+  # smartid-hq:
+  #   build: ../smartid-hq
+  #   container_name: smartid-hq
+  #   restart: unless-stopped
+  #   environment:
+  #     - NODE_ENV=production
+  #     - NEXT_PUBLIC_APP_URL=https://hq.smartid.my
+  #   ports:
+  #     - "3005:3000"
+  #   networks:
+  #     - smartid-network
+
+networks:
+  smartid-network:
+    driver: bridge
+
+volumes:
+  nginx-logs:

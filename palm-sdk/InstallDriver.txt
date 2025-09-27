@@ -1,0 +1,13 @@
+安装驱动程序：     
+Windows平台：
+1. 切换到driver目录。
+2. 双击InstallDriver.exe进行安装。
+
+Linux平台：
+设置设备udev权限后，使用SDK无需使用root权限。
+1. cd scripts
+2. sudo sh ./setup_udev_rules.sh
+
+安装SDK和samples依赖的三方库：
+1. cd scripts
+2. sudo sh ./install_dependency.sh

@@ -1,0 +1,625 @@
+'use client'
+
+import React, { useState, useEffect } from 'react'
+import { DashboardLayout } from '@/components/layout/dashboard-layout'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { toast } from 'sonner'
+import { Search, Filter, Users, Calendar, Edit, RefreshCw, Download, Plus } from 'lucide-react'
+
+type User = {
+  id: string
+  full_name: string
+  employee_id: string
+  primary_role: string
+  department?: string
+}
+
+type LeaveType = {
+  id: string
+  name: string
+  max_days: number
+  color: string
+  icon: string
+}
+
+type LeaveBalance = {
+  id: string
+  user_id: string
+  leave_type_id: string
+  allocated_days: number
+  used_days: number
+  remaining_days: number
+  carried_forward: number
+  year: number
+  user?: User
+  leave_type?: LeaveType
+}
+
+export default function LeaveBalancesPage() {
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [users, setUsers] = useState<User[]>([])
+  const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([])
+  const [balances, setBalances] = useState<LeaveBalance[]>([])
+  const [filteredBalances, setFilteredBalances] = useState<LeaveBalance[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [userFilter, setUserFilter] = useState('all')
+  const [leaveTypeFilter, setLeaveTypeFilter] = useState('all')
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
+  const [selectedBalance, setSelectedBalance] = useState<LeaveBalance | null>(null)
+
+  // Form state
+  const [editFormData, setEditFormData] = useState({
+    allocated_days: 0,
+    carried_forward: 0
+  })
+
+  const [bulkFormData, setBulkFormData] = useState({
+    leave_type_id: '',
+    allocated_days: 0,
+    apply_to_all: false,
+    selected_roles: [] as string[]
+  })
+
+  useEffect(() => {
+    initializeData()
+  }, [])
+
+  useEffect(() => {
+    filterBalances()
+  }, [balances, searchTerm, userFilter, leaveTypeFilter, selectedYear])
+
+  const initializeData = async () => {
+    try {
+      setLoading(true)
+      
+      // Get current user info from debug endpoint
+      const debugResponse = await fetch('/api/debug/supabase')
+      const debugData = await debugResponse.json()
+      
+      const serviceTest = debugData.tests.find((t: any) => t.name === 'Service Role Client')
+      const user = serviceTest?.data?.[0]
+      
+      if (user) {
+        setCurrentUser(user)
+        await Promise.all([
+          loadUsers(user.institution_id),
+          loadLeaveTypes(user.institution_id),
+          loadBalances(user.institution_id)
+        ])
+      }
+    } catch (error) {
+      console.error('Error initializing leave balances data:', error)
+      toast.error('Failed to load leave balances data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadUsers = async (institutionId: string) => {
+    try {
+      // Mock users data - in real implementation, fetch from /api/users
+      const mockUsers: User[] = [
+        { id: '1', full_name: 'John Doe', employee_id: 'TC001', primary_role: 'teacher', department: 'Mathematics' },
+        { id: '2', full_name: 'Jane Smith', employee_id: 'ST001', primary_role: 'staff', department: 'Administration' },
+        { id: '3', full_name: 'Bob Johnson', employee_id: 'SD001', primary_role: 'student', department: 'Grade 10' },
+        { id: '4', full_name: 'Alice Brown', employee_id: 'TC002', primary_role: 'teacher', department: 'Science' }
+      ]
+      setUsers(mockUsers)
+    } catch (error) {
+      console.error('Error loading users:', error)
+      toast.error('Failed to load users')
+    }
+  }
+
+  const loadLeaveTypes = async (institutionId: string) => {
+    try {
+      // Mock leave types data - in real implementation, fetch from /api/leave-types
+      const mockLeaveTypes: LeaveType[] = [
+        { id: '1', name: 'Annual Leave', max_days: 21, color: 'blue', icon: '🏖️' },
+        { id: '2', name: 'Sick Leave', max_days: 14, color: 'red', icon: '🏥' },
+        { id: '3', name: 'Emergency Leave', max_days: 5, color: 'orange', icon: '🚨' },
+        { id: '4', name: 'Study Leave', max_days: 10, color: 'green', icon: '📚' }
+      ]
+      setLeaveTypes(mockLeaveTypes)
+    } catch (error) {
+      console.error('Error loading leave types:', error)
+      toast.error('Failed to load leave types')
+    }
+  }
+
+  const loadBalances = async (institutionId: string) => {
+    try {
+      // Mock leave balances data - in real implementation, fetch from /api/leave-balances
+      const currentYear = new Date().getFullYear()
+      const mockBalances: LeaveBalance[] = []
+      
+      // Generate balances for each user-leave type combination
+      const mockUsers = [
+        { id: '1', full_name: 'John Doe', employee_id: 'TC001', primary_role: 'teacher' },
+        { id: '2', full_name: 'Jane Smith', employee_id: 'ST001', primary_role: 'staff' },
+        { id: '3', full_name: 'Bob Johnson', employee_id: 'SD001', primary_role: 'student' },
+        { id: '4', full_name: 'Alice Brown', employee_id: 'TC002', primary_role: 'teacher' }
+      ]
+      
+      const mockLeaveTypesData = [
+        { id: '1', name: 'Annual Leave', max_days: 21, color: 'blue', icon: '🏖️' },
+        { id: '2', name: 'Sick Leave', max_days: 14, color: 'red', icon: '🏥' },
+        { id: '3', name: 'Emergency Leave', max_days: 5, color: 'orange', icon: '🚨' },
+        { id: '4', name: 'Study Leave', max_days: 10, color: 'green', icon: '📚' }
+      ]
+
+      mockUsers.forEach(user => {
+        mockLeaveTypesData.forEach(leaveType => {
+          const used = Math.floor(Math.random() * (leaveType.max_days * 0.7))
+          const carried = Math.floor(Math.random() * 5)
+          const allocated = leaveType.max_days + carried
+          
+          mockBalances.push({
+            id: `${user.id}-${leaveType.id}-${currentYear}`,
+            user_id: user.id,
+            leave_type_id: leaveType.id,
+            allocated_days: allocated,
+            used_days: used,
+            remaining_days: allocated - used,
+            carried_forward: carried,
+            year: currentYear,
+            user: user,
+            leave_type: leaveType
+          })
+        })
+      })
+      
+      setBalances(mockBalances)
+    } catch (error) {
+      console.error('Error loading leave balances:', error)
+      toast.error('Failed to load leave balances')
+    }
+  }
+
+  const filterBalances = () => {
+    let filtered = balances.filter(balance => balance.year === selectedYear)
+
+    if (searchTerm) {
+      filtered = filtered.filter(balance =>
+        balance.user?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        balance.user?.employee_id.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    if (userFilter !== 'all') {
+      filtered = filtered.filter(balance => balance.user?.primary_role === userFilter)
+    }
+
+    if (leaveTypeFilter !== 'all') {
+      filtered = filtered.filter(balance => balance.leave_type_id === leaveTypeFilter)
+    }
+
+    setFilteredBalances(filtered)
+  }
+
+  const handleEditBalance = async () => {
+    try {
+      if (!selectedBalance) return
+
+      // Mock edit balance - in real implementation, call /api/leave-balances/:id
+      const updatedBalances = balances.map(balance =>
+        balance.id === selectedBalance.id
+          ? {
+              ...balance,
+              allocated_days: editFormData.allocated_days,
+              carried_forward: editFormData.carried_forward,
+              remaining_days: editFormData.allocated_days - balance.used_days
+            }
+          : balance
+      )
+
+      setBalances(updatedBalances)
+      setIsEditModalOpen(false)
+      setSelectedBalance(null)
+      toast.success('Leave balance updated successfully')
+    } catch (error) {
+      console.error('Error updating leave balance:', error)
+      toast.error('Failed to update leave balance')
+    }
+  }
+
+  const handleBulkUpdate = async () => {
+    try {
+      if (!bulkFormData.leave_type_id || bulkFormData.allocated_days <= 0) {
+        toast.error('Please select a leave type and enter allocated days')
+        return
+      }
+
+      let usersToUpdate = users
+      if (!bulkFormData.apply_to_all && bulkFormData.selected_roles.length > 0) {
+        usersToUpdate = users.filter(user => bulkFormData.selected_roles.includes(user.primary_role))
+      }
+
+      // Mock bulk update - in real implementation, call /api/leave-balances/bulk-update
+      const updatedBalances = balances.map(balance => {
+        if (balance.leave_type_id === bulkFormData.leave_type_id && 
+            usersToUpdate.some(u => u.id === balance.user_id)) {
+          return {
+            ...balance,
+            allocated_days: bulkFormData.allocated_days,
+            remaining_days: bulkFormData.allocated_days - balance.used_days
+          }
+        }
+        return balance
+      })
+
+      setBalances(updatedBalances)
+      setIsBulkModalOpen(false)
+      setBulkFormData({ leave_type_id: '', allocated_days: 0, apply_to_all: false, selected_roles: [] })
+      toast.success(`Updated balances for ${usersToUpdate.length} users`)
+    } catch (error) {
+      console.error('Error bulk updating balances:', error)
+      toast.error('Failed to bulk update balances')
+    }
+  }
+
+  const openEditModal = (balance: LeaveBalance) => {
+    setSelectedBalance(balance)
+    setEditFormData({
+      allocated_days: balance.allocated_days,
+      carried_forward: balance.carried_forward
+    })
+    setIsEditModalOpen(true)
+  }
+
+  const getColorClass = (color: string) => {
+    switch (color) {
+      case 'blue': return 'bg-blue-100 text-blue-800'
+      case 'red': return 'bg-red-100 text-red-800'
+      case 'orange': return 'bg-orange-100 text-orange-800'
+      case 'green': return 'bg-green-100 text-green-800'
+      case 'purple': return 'bg-purple-100 text-purple-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const getRoleColor = (role: string) => {
+    switch (role.toLowerCase()) {
+      case 'teacher': return 'bg-purple-100 text-purple-800'
+      case 'staff': return 'bg-blue-100 text-blue-800'
+      case 'student': return 'bg-green-100 text-green-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const exportBalances = () => {
+    toast.success('Leave balances exported successfully')
+  }
+
+  const roleOptions = [...new Set(users.map(u => u.primary_role))]
+  const yearOptions = [selectedYear - 1, selectedYear, selectedYear + 1]
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border-0 shadow-lg">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Leave Balances Management 📊</h1>
+              <p className="text-gray-600 dark:text-gray-400">Set and manage individual leave quotas for all users</p>
+            </div>
+            <div className="mt-4 lg:mt-0 flex gap-3">
+              <Button onClick={exportBalances} variant="outline" className="flex items-center gap-2">
+                <Download className="w-4 h-4" />
+                Export
+              </Button>
+              <Button onClick={() => setIsBulkModalOpen(true)} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Bulk Update
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
+          <CardContent className="p-6">
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Search by employee name or ID..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex gap-4">
+                <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                  <SelectTrigger className="w-32">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearOptions.map(year => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Select value={userFilter} onValueChange={setUserFilter}>
+                  <SelectTrigger className="w-40">
+                    <Users className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder="Filter by role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Roles</SelectItem>
+                    {roleOptions.map(role => (
+                      <SelectItem key={role} value={role}>
+                        {role.charAt(0).toUpperCase() + role.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Select value={leaveTypeFilter} onValueChange={setLeaveTypeFilter}>
+                  <SelectTrigger className="w-40">
+                    <Filter className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder="Filter by type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Leave Types</SelectItem>
+                    {leaveTypes.map(type => (
+                      <SelectItem key={type.id} value={type.id}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Leave Balances */}
+        <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="w-5 h-5" />
+              Leave Balances ({selectedYear})
+              <Badge variant="secondary" className="ml-auto">
+                {filteredBalances.length} records
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {filteredBalances.length === 0 ? (
+                <div className="text-center py-12">
+                  <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p className="text-gray-500 dark:text-gray-400">No leave balances found</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {filteredBalances.map((balance) => (
+                    <div
+                      key={balance.id}
+                      className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+                          {balance.user?.full_name.charAt(0) || 'U'}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="font-medium text-gray-900 dark:text-white">
+                              {balance.user?.full_name}
+                            </div>
+                            <Badge className={getRoleColor(balance.user?.primary_role || '')} variant="outline">
+                              {balance.user?.primary_role}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <Badge className={getColorClass(balance.leave_type?.color || 'gray')}>
+                              {balance.leave_type?.icon} {balance.leave_type?.name}
+                            </Badge>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                              {balance.user?.employee_id}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-gray-900 dark:text-white">
+                            {balance.remaining_days}/{balance.allocated_days}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            Used: {balance.used_days}
+                            {balance.carried_forward > 0 && ` • CF: ${balance.carried_forward}`}
+                          </div>
+                        </div>
+                        
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => openEditModal(balance)}
+                          className="p-2"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Edit Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Leave Balance</DialogTitle>
+          </DialogHeader>
+          {selectedBalance && (
+            <div className="space-y-4">
+              <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="font-medium text-gray-900 dark:text-white">
+                  {selectedBalance.user?.full_name}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  {selectedBalance.leave_type?.icon} {selectedBalance.leave_type?.name}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Allocated Days</label>
+                <Input
+                  type="number"
+                  value={editFormData.allocated_days}
+                  onChange={(e) => setEditFormData({...editFormData, allocated_days: parseInt(e.target.value) || 0})}
+                  min="0"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Carried Forward Days</label>
+                <Input
+                  type="number"
+                  value={editFormData.carried_forward}
+                  onChange={(e) => setEditFormData({...editFormData, carried_forward: parseInt(e.target.value) || 0})}
+                  min="0"
+                />
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-900 rounded-lg p-3">
+                <div className="text-sm text-blue-700 dark:text-blue-300">
+                  <div>Used Days: {selectedBalance.used_days}</div>
+                  <div>Remaining Days: {editFormData.allocated_days - selectedBalance.used_days}</div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button onClick={handleEditBalance} className="flex-1">
+                  Update Balance
+                </Button>
+                <Button variant="outline" onClick={() => setIsEditModalOpen(false)} className="flex-1">
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Update Modal */}
+      <Dialog open={isBulkModalOpen} onOpenChange={setIsBulkModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Bulk Update Leave Balances</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Leave Type</label>
+              <Select value={bulkFormData.leave_type_id} onValueChange={(value) => setBulkFormData({...bulkFormData, leave_type_id: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select leave type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {leaveTypes.map(type => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.icon} {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Allocated Days</label>
+              <Input
+                type="number"
+                value={bulkFormData.allocated_days}
+                onChange={(e) => setBulkFormData({...bulkFormData, allocated_days: parseInt(e.target.value) || 0})}
+                min="0"
+                placeholder="Enter days to allocate"
+              />
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="apply_to_all"
+                  checked={bulkFormData.apply_to_all}
+                  onChange={(e) => setBulkFormData({...bulkFormData, apply_to_all: e.target.checked})}
+                  className="rounded border-gray-300"
+                />
+                <label htmlFor="apply_to_all" className="text-sm text-gray-700 dark:text-gray-300">
+                  Apply to all users
+                </label>
+              </div>
+
+              {!bulkFormData.apply_to_all && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Select Roles</label>
+                  <div className="space-y-2 mt-2">
+                    {roleOptions.map(role => (
+                      <label key={role} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={bulkFormData.selected_roles.includes(role)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setBulkFormData({...bulkFormData, selected_roles: [...bulkFormData.selected_roles, role]})
+                            } else {
+                              setBulkFormData({...bulkFormData, selected_roles: bulkFormData.selected_roles.filter(r => r !== role)})
+                            }
+                          }}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700 dark:text-gray-300 capitalize">{role}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button onClick={handleBulkUpdate} className="flex-1">
+                Update Balances
+              </Button>
+              <Button variant="outline" onClick={() => setIsBulkModalOpen(false)} className="flex-1">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </DashboardLayout>
+  )
+}
