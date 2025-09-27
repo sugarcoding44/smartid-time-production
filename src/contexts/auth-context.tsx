@@ -121,11 +121,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('🔍 Fetching profile for user:', userId)
       
-      // First try simple query without joins
+      // First try simple query without joins - use auth_user_id to match Supabase auth user
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
-        .eq('id', userId)
+        .eq('auth_user_id', userId)
         .maybeSingle()
 
       console.log('📊 User query result:', { userData, userError })
