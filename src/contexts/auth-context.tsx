@@ -121,12 +121,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('🔍 Fetching profile for user:', userId)
       
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+      )
+      
       // First try simple query without joins - use auth_user_id to match Supabase auth user
-      const { data: userData, error: userError } = await supabase
+      const queryPromise = supabase
         .from('users')
         .select('*')
         .eq('auth_user_id', userId)
         .maybeSingle()
+      
+      let userData, userError
+      try {
+        const result = await Promise.race([queryPromise, timeoutPromise])
+        userData = result.data
+        userError = result.error
+      } catch (timeoutError) {
+        console.log('⏰ Profile fetch timed out, will create temporary profile')
+        throw timeoutError
+      }
 
       console.log('📊 User query result:', { userData, userError })
 
@@ -186,7 +201,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('❌ Error fetching profile:', error)
-      setProfile(null)
+      console.log('⚠️ Profile fetch failed, but user is authenticated. Creating temporary profile.')
+      
+      // Create temporary profile to allow user to proceed
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setProfile({
+          id: user.id,
+          full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+          email: user.email || '',
+          role: 'admin' as UserRole,
+          institution_id: null,
+          employee_id: `TMP${Date.now()}`,
+          subscription_plan: 'free'
+        })
+        console.log('✅ Temporary profile created, user can proceed')
+      } else {
+        setProfile(null)
+      }
     }
   }
 

@@ -41,12 +41,23 @@ export default function SignInPage() {
     setIsLoading(true)
 
     try {
+      console.log('🔑 Attempting sign-in for:', formData.email)
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password
       })
 
+      console.log('🔑 Sign-in result:', {
+        hasUser: !!data.user,
+        userEmail: data.user?.email,
+        userConfirmed: data.user?.email_confirmed_at,
+        error: error?.message,
+        errorCode: error?.message
+      })
+
       if (error) {
+        console.error('❌ Sign-in error:', error)
         toast.error(error.message)
         return
       }
