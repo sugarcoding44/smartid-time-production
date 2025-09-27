@@ -76,6 +76,27 @@ export default function AuthCallbackPage() {
           toast.success('Institution created successfully!')
         }
         
+        // Set the session in Supabase before redirect to maintain auth state
+        console.log('🔐 Setting Supabase session before redirect...')
+        try {
+          // Get the tokens from URL
+          const hashParams = new URLSearchParams(window.location.hash.substring(1))
+          const urlParams = new URLSearchParams(window.location.search)
+          const accessToken = hashParams.get('access_token') || urlParams.get('access_token')
+          const refreshToken = hashParams.get('refresh_token') || urlParams.get('refresh_token')
+          
+          if (accessToken && refreshToken) {
+            // Set the session explicitly
+            await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            })
+            console.log('✅ Session set successfully')
+          }
+        } catch (sessionError) {
+          console.error('❌ Failed to set session:', sessionError)
+        }
+        
         // Redirect based on API response
         setTimeout(() => {
           console.log('🔄 Redirecting to:', redirectPath)
