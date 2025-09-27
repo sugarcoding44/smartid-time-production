@@ -39,27 +39,43 @@ export default function AuthCallbackPage() {
         console.log('🚀 New signup detected, completing account setup...')
         setStatus('Creating your institution and user account...')
         
-        // Set the session from URL tokens first
+        // Set the session from URL tokens first (non-blocking)
+        let sessionSetPromise = null
         try {
           const hashParams = new URLSearchParams(window.location.hash.substring(1))
           const accessToken = hashParams.get('access_token')
           const refreshToken = hashParams.get('refresh_token')
           
           if (accessToken && refreshToken) {
-            console.log('🔑 Setting session with tokens...')
-            await supabase.auth.setSession({
+            console.log('🔑 Setting session with tokens (non-blocking)...')
+            sessionSetPromise = supabase.auth.setSession({
               access_token: accessToken,
               refresh_token: refreshToken
             })
-            console.log('✅ Session set successfully')
+            
+            // Race with timeout - don't wait forever
+            const TIMEOUT_MS = 2000
+            Promise.race([
+              sessionSetPromise.then(() => console.log('✅ Session set successfully')),
+              new Promise((resolve) => setTimeout(() => {
+                console.warn('⏱️ Session setting timed out, continuing anyway')
+                resolve(null)
+              }, TIMEOUT_MS))
+            ])
           }
         } catch (error) {
           console.warn('⚠️ Session setting failed:', error)
         }
         
         // Call complete-setup API to create institution and user records
+        console.log('🔄 About to call complete-setup API...')
+        console.log('🔎 API payload:', {
+          userId: user.id,
+          institutionData: institutionData
+        })
+        
         try {
-          console.log('🔄 Calling complete-setup API...')
+          console.log('🔄 Making fetch request to complete-setup API...')
           setStatus('Setting up your institution...')
           
           const setupResponse = await fetch('/api/auth/complete-setup', {
@@ -73,6 +89,7 @@ export default function AuthCallbackPage() {
             })
           })
           
+          console.log('📊 Setup API HTTP status:', setupResponse.status)
           const setupResult = await setupResponse.json()
           console.log('📊 Setup API response:', setupResult)
           

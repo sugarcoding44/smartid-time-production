@@ -113,11 +113,14 @@ export async function POST(request: NextRequest) {
         institution_id: institution.id,
         full_name: institutionData.contact_person,
         email: institutionData.email,
-        role: 'admin',
+        ic_number: institutionData.admin_ic_number || 'PENDING',
+        phone: '+60123456789', // Placeholder - user can update later
+        primary_system: 'hub_web',
+        primary_role: 'admin',
+        smartid_hub_role: 'admin',
         employee_id: `ADM${Date.now()}`,
         status: 'active',
-        is_admin: true,
-        primary_system: 'smartid-hub'
+        email_verified: true // Since they just verified their email
       })
 
     if (profileError) {
