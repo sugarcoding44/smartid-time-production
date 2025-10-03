@@ -6,7 +6,7 @@ export type TablesUpdate<T extends keyof Database['public']['Tables']> = Databas
 
 // Specific types
 export type Institution = Tables<'institutions'>
-export type SchoolUser = Tables<'school_users'>
+export type User = Tables<'users'>
 
 export type UserType = 'student' | 'teacher' | 'staff'
 

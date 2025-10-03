@@ -3,11 +3,9 @@
 import React from 'react'
 import { Header } from './header'
 import { HeroSection } from './hero-section'
-import { FeaturesSection } from './features-section'
-import { TechnologySection } from './technology-section'
+import { EcosystemOverviewSection } from './ecosystem-overview-section'
+import { SimpleFeaturesSection } from './simple-features-section'
 import { HardwareSection } from './hardware-section'
-import { HowItWorksSection } from './how-it-works-section'
-import { PricingSection } from './pricing-section'
 import { CTASection } from './cta-section'
 import { Footer } from './footer'
 
@@ -17,11 +15,9 @@ export function LandingPage() {
       <Header />
       <main>
         <HeroSection />
-        <FeaturesSection />
-        <TechnologySection />
+        <EcosystemOverviewSection />
+        <SimpleFeaturesSection />
         <HardwareSection />
-        <HowItWorksSection />
-        <PricingSection />
         <CTASection />
       </main>
       <Footer />

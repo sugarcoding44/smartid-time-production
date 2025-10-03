@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = createClient()
+  const supabase = await createClient()
     const body = await request.json()
     
     // Get current user

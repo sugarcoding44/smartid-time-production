@@ -139,7 +139,7 @@ export default function PalmManagementPage() {
       }
       
       // Transform the user data to match our PalmUser type
-      const palmUsers = (data.data || []).map((user: User) => ({
+      const palmUsers = (data.data || []).map((user: any) => ({
         id: user.id,
         full_name: user.full_name,
         employee_id: user.employee_id,

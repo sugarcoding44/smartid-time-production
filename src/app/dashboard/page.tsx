@@ -11,31 +11,19 @@ import { QuickUserModal } from '@/components/features/quick-user-modal'
 import { PalmEnrollmentModal } from '@/components/features/palm-enrollment-modal'
 import { CardIssuanceModal } from '@/components/features/card-issuance-modal'
 import { useAuth } from '@/contexts/auth-context'
-
-// Sample data - using the same as the original
-const stats = [
-  { title: 'Total Users', value: '1,247', icon: '👥', gradient: 'from-blue-500 to-blue-600' },
-  { title: 'Teachers', value: '87', icon: '👨‍🏫', gradient: 'from-green-500 to-green-600' },
-  { title: 'Staff Members', value: '43', icon: '👩‍💼', gradient: 'from-purple-500 to-purple-600' },
-  { title: 'Students', value: '1,117', icon: '🎓', gradient: 'from-orange-500 to-orange-600' },
-]
-
-const recentActivities = [
-  { icon: '✋', title: 'TC0087 completed palm enrollment', time: '2 minutes ago', color: 'bg-green-500' },
-  { icon: '💳', title: 'SD0245 received smart card', time: '15 minutes ago', color: 'bg-blue-500' },
-  { icon: '👤', title: 'New user ST0044 registered', time: '1 hour ago', color: 'bg-purple-500' },
-  { icon: '✋', title: 'TC0045 updated biometric data', time: '3 hours ago', color: 'bg-green-500' },
-  { icon: '💳', title: 'Batch card printing completed', time: '1 day ago', color: 'bg-blue-500' },
-]
-
-const progressData = [
-  { label: 'Palm Recognition Enrollment', value: 89, total: 1247, completed: 1110 },
-  { label: 'Smart Card Distribution', value: 94, total: 1247, completed: 1172 },
-  { label: 'Complete Registration', value: 82, total: 1247, completed: 1023 },
-]
+import { toast } from 'sonner'
 
 export default function DashboardPage() {
   const { user, profile, loading } = useAuth()
+  
+  // Dashboard data states
+  const [dashboardData, setDashboardData] = useState<any>({
+    users: { total: 0, teacher: 0, staff: 0, student: 0, admin: 0 },
+    enrollment: { rate: 0, enrolled: 0, total: 0 },
+    attendance: { today: 0, rate: 0 },
+    recentActivities: []
+  })
+  const [dataLoading, setDataLoading] = useState(true)
   
   // Quick action modal states
   const [showAddUserModal, setShowAddUserModal] = useState(false)
@@ -44,6 +32,59 @@ export default function DashboardPage() {
   const [showPalmEnrollModal, setShowPalmEnrollModal] = useState(false)
   const [showCardIssueModal, setShowCardIssueModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState<any>(null)
+  
+  useEffect(() => {
+    fetchDashboardData()
+  }, [])
+  
+  const fetchDashboardData = async () => {
+    try {
+      setDataLoading(true)
+      const response = await fetch('/api/dashboard/stats')
+      const result = await response.json()
+      
+      if (result.success) {
+        setDashboardData(result.stats)
+      } else {
+        console.error('Failed to fetch dashboard data:', result.error)
+        toast.error('Failed to load dashboard data')
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
+      toast.error('Failed to load dashboard data')
+    } finally {
+      setDataLoading(false)
+    }
+  }
+  
+  // Transform data for display
+  const stats = [
+    { title: 'Total Users', value: dashboardData.users.total.toLocaleString(), icon: '👥', gradient: 'from-blue-500 to-blue-600' },
+    { title: 'Teachers', value: dashboardData.users.teacher.toLocaleString(), icon: '👨‍🏫', gradient: 'from-green-500 to-green-600' },
+    { title: 'Staff Members', value: dashboardData.users.staff.toLocaleString(), icon: '👩‍💼', gradient: 'from-purple-500 to-purple-600' },
+    { title: 'Students', value: dashboardData.users.student.toLocaleString(), icon: '🎓', gradient: 'from-orange-500 to-orange-600' },
+  ]
+  
+  const progressData = [
+    { 
+      label: 'Palm Recognition Enrollment', 
+      value: dashboardData.enrollment.rate, 
+      total: dashboardData.enrollment.total, 
+      completed: dashboardData.enrollment.enrolled 
+    },
+    { 
+      label: 'Smart Card Distribution', 
+      value: 0, // Will be updated when we have smart card data
+      total: dashboardData.users.total, 
+      completed: 0 
+    },
+    { 
+      label: 'Today\'s Attendance', 
+      value: dashboardData.attendance.rate, 
+      total: dashboardData.users.total, 
+      completed: dashboardData.attendance.today 
+    },
+  ]
 
   // Quick action handlers
   const handlePalmUserSelect = (user: any) => {
@@ -81,53 +122,67 @@ export default function DashboardPage() {
   const handleUserAdded = () => {
     // Refresh user stats or show success message
     console.log('New user added successfully')
+    fetchDashboardData() // Refresh dashboard data
   }
-
+  
+  // Show loading state if auth is still loading
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+  
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        {/* Welcome Header */}
-        <div className="bg-white dark:bg-gradient-to-br dark:from-violet-900 dark:to-purple-900 rounded-2xl p-6 border-0 shadow-lg dark:border dark:border-purple-800/50">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Welcome back, {loading ? '...' : (profile?.full_name || user?.email?.split('@')[0] || 'Admin')} 👋</h1>
-              <p className="text-gray-600 dark:text-purple-200/90">Institution Admin • {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-            </div>
-            <div className="flex gap-8 mt-4 lg:mt-0">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">1,247</div>
-                <div className="text-sm text-gray-500 dark:text-purple-200/70">Total Users</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">89%</div>
-                <div className="text-sm text-gray-500 dark:text-purple-200/70">Enrollment Rate</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, index) => (
-            <Card key={index} className="relative overflow-hidden bg-white border-0 shadow-lg dark:bg-slate-800 dark:border-slate-700 hover:shadow-xl dark:hover:bg-slate-700 transition-all duration-300">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
+              {/* Welcome Header */}
+              <div className="bg-white dark:bg-gradient-to-br dark:from-violet-900 dark:to-purple-900 rounded-2xl p-6 border-0 shadow-lg dark:border dark:border-purple-800/50">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1">{stat.title}</p>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-slate-50">{stat.value}</p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
-                      <span className="text-xs text-gray-500 dark:text-slate-400">+12% from last month</span>
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Welcome back, {loading ? '...' : (profile?.full_name || user?.email?.split('@')[0] || 'Admin')} 👋</h1>
+                    <p className="text-gray-600 dark:text-purple-200/90">Institution Admin • {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                  </div>
+                  <div className="flex gap-8 mt-4 lg:mt-0">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{dataLoading ? '...' : dashboardData.users.total}</div>
+                      <div className="text-sm text-gray-500 dark:text-purple-200/70">Total Users</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{dataLoading ? '...' : `${dashboardData.enrollment.rate}%`}</div>
+                      <div className="text-sm text-gray-500 dark:text-purple-200/70">Enrollment Rate</div>
                     </div>
                   </div>
-                  <div className={`w-12 h-12 bg-gradient-to-br ${stat.gradient} rounded-2xl flex items-center justify-center text-white text-xl shadow-lg`}>
-                    {stat.icon}
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              </div>
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {stats.map((stat, index) => (
+                  <Card key={index} className="relative overflow-hidden bg-white border-0 shadow-lg dark:bg-slate-800 dark:border-slate-700 hover:shadow-xl dark:hover:bg-slate-700 transition-all duration-300">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1">{stat.title}</p>
+                          <p className="text-2xl font-bold text-gray-900 dark:text-slate-50">{dataLoading ? '...' : stat.value}</p>
+                          {!dataLoading && parseInt(stat.value) > 0 && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
+                              <span className="text-xs text-gray-500 dark:text-slate-400">Active users</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className={`w-12 h-12 bg-gradient-to-br ${stat.gradient} rounded-2xl flex items-center justify-center text-white text-xl shadow-lg`}>
+                          {stat.icon}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
 
         {/* Quick Actions */}
         <Card className="bg-white border-0 shadow-lg dark:bg-slate-800 dark:border-slate-700">
@@ -260,21 +315,31 @@ export default function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {recentActivities.map((activity, index) => (
-                    <div key={index} className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                      <div className={`w-10 h-10 ${activity.color} rounded-full flex items-center justify-center text-white text-sm flex-shrink-0 shadow-md`}>
-                        {activity.icon}
+                  <div className="space-y-4 max-h-96 overflow-y-auto">
+                    {dataLoading ? (
+                      <div className="text-center py-8 text-gray-500 dark:text-slate-400">
+                        Loading activities...
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate">
-                          {activity.title}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-slate-400">{activity.time}</p>
+                    ) : dashboardData.recentActivities.length > 0 ? (
+                      dashboardData.recentActivities.map((activity: any, index: number) => (
+                        <div key={index} className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                          <div className={`w-10 h-10 ${activity.color} rounded-full flex items-center justify-center text-white text-sm flex-shrink-0 shadow-md`}>
+                            {activity.icon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate">
+                              {activity.title}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-slate-400">{activity.time}</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-gray-500 dark:text-slate-400">
+                        No recent activities
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    )}
+                  </div>
               </CardContent>
             </Card>
 

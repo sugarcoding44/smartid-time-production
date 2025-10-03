@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json()
@@ -22,6 +22,9 @@ export async function POST(
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
+    // Get the id from params
+    const { id } = await params
+    
     // Update user with palm data
     const { data: user, error } = await serviceSupabase
       .from('users')
@@ -34,7 +37,7 @@ export async function POST(
         last_palm_scan: null,
         updated_at: new Date().toISOString()
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single()
 

@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createClient(
@@ -11,7 +11,7 @@ export async function PATCH(
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
     const body = await request.json()
-    const holidayId = params.id
+    const { id: holidayId } = await params
 
     const {
       name,
@@ -94,14 +94,14 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
-    const holidayId = params.id
+    const { id: holidayId } = await params
 
     // Delete the holiday
     const { error } = await supabase

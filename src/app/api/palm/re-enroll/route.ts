@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient()
     const { userId, newPalmId, hand_type = 'right', quality_score = 95 } = await request.json()
 
     if (!userId || !newPalmId) {
@@ -14,6 +13,12 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Starting palm re-enrollment for user:', userId, 'new palm ID:', newPalmId)
+
+    // Use service client for database operations
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
     // First, get the current user data
     const { data: user, error: userError } = await supabase

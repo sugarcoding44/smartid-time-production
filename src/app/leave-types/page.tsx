@@ -241,7 +241,7 @@ export default function LeaveTypesPage() {
       min_advance_notice_days: type.min_advance_notice_days ?? 1,
       has_annual_quota: type.has_annual_quota ?? true,
       default_quota_days: type.default_quota_days ?? 14.0,
-      quota_calculation_method: type.quota_calculation_method ?? 'yearly',
+      quota_calculation_method: (type.quota_calculation_method as 'yearly' | 'monthly' | 'fixed') ?? 'yearly',
       allow_carry_forward: type.allow_carry_forward ?? false,
       max_carry_forward_days: type.max_carry_forward_days ?? 5.0,
       carry_forward_expiry_months: type.carry_forward_expiry_months ?? 3,

@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient()
     const { searchParams } = new URL(request.url)
     const institutionId = searchParams.get('institution_id')
     const limit = parseInt(searchParams.get('limit') || '50')
@@ -16,6 +15,12 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('Fetching palm activity for institution:', institutionId, 'limit:', limit)
+    
+    // Use service client to access tables that might not be in types
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
     
     // Check if palm tables exist by trying a simple query first
     try {
@@ -31,8 +36,8 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    let enrollmentSessions = []
-    let verificationLogs = []
+    let enrollmentSessions: any[] = []
+    let verificationLogs: any[] = []
     
     // Try to query palm enrollment sessions for enrollment activities
     try {

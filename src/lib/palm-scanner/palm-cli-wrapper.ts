@@ -97,7 +97,7 @@ export class PalmCliWrapper extends EventEmitter {
       try {
         await this.createDevice()
         await this.openDevice()
-        await this.setLedMode()
+        await this.setLedMode('on')
         await this.enableDimPalm()
       } catch (error) {
         console.error('Device initialization failed:', error)
@@ -291,22 +291,6 @@ export class PalmCliWrapper extends EventEmitter {
     }
   }
 
-  /**
-   * Set LED mode for palm scanner
-   */
-  private async setLedMode(): Promise<void> {
-    try {
-      console.log('Setting LED mode...')
-      const response = await this.sendCommand('l', '', 2000)
-      console.log('LED mode set response:', response)
-      
-      // Add small delay
-      await new Promise(resolve => setTimeout(resolve, 300))
-    } catch (error) {
-      console.error('Error setting LED mode:', error)
-      // LED mode is not critical, so we don't throw
-    }
-  }
 
   /**
    * Enable DimPalm algorithms

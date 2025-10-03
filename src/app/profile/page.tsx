@@ -190,7 +190,7 @@ export default function ProfilePage() {
                 setSubscription(prev => ({ 
                   ...prev, 
                   name: `SmartID ${inst.subscription_plan.toUpperCase()}`,
-                  status: inst.status === 'active' ? 'active' : 'inactive'
+                  status: inst.status === 'active' ? 'active' : 'suspended'
                 }))
               }
               

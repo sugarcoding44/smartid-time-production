@@ -54,7 +54,7 @@ const navigationSections = {
     title: 'Biometric & Cards',
     items: [
       { name: 'Palm Management', href: '/dashboard/palm', icon: Hand },
-      { name: 'Smart Cards', href: '/dashboard/cards', icon: CreditCard },
+      { name: 'SmartID Card', href: '/dashboard/cards', icon: CreditCard },
       { name: 'Order Cards', href: '/dashboard/order-cards', icon: ShoppingCart },
     ] as NavigationItem[]
   },
@@ -88,12 +88,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       const logoutPromise = supabase.auth.signOut()
       
       try {
-        const { error } = await Promise.race([logoutPromise, timeoutPromise])
-        console.log('🚪 Supabase signOut result:', { error })
+        const result = await Promise.race([logoutPromise, timeoutPromise]) as { error: any } | undefined
+        console.log('🚪 Supabase signOut result:', result)
         
-        if (error) {
-          console.error('❌ Logout error:', error)
-          toast.error(`Error signing out: ${error.message}`)
+        if (result?.error) {
+          console.error('❌ Logout error:', result.error)
+          toast.error(`Error signing out: ${result.error.message}`)
           // Still redirect even if there's an error
         } else {
           console.log('✅ Logout successful!')

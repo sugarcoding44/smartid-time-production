@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPalmScannerService } from '@/lib/palm-scanner/scanner-service'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient()
     const { 
       user_id,
       hand_type = 'right',
@@ -21,6 +20,12 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`Starting palm enrollment for user ${user_id}, type: ${enrollment_type}`)
+
+    // Create service client for database operations
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
     const scannerService = getPalmScannerService()
     

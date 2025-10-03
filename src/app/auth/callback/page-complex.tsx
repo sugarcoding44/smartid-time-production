@@ -104,7 +104,7 @@ export default function AuthCallbackPage() {
           console.error('Institution setup error:', setupError)
           setStatus('error')
           
-          if (setupError.name === 'AbortError') {
+          if (setupError instanceof Error && setupError.name === 'AbortError') {
             setMessage('Setup timed out. Redirecting to dashboard...')
             setTimeout(() => router.push('/dashboard'), 3000)
           } else {

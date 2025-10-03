@@ -45,13 +45,13 @@ export async function POST(request: NextRequest) {
     const nextNumber = (count || 0) + 1
     const employee_id = `${typePrefix}${nextNumber.toString().padStart(4, '0')}`
 
-    // Prepare user data - users created via web admin are for mobile app access
+    // Prepare user data - users created via TIME web admin are for TIME mobile app access
     const userData = {
       full_name,
       employee_id,
       primary_role,
-      primary_system: 'hub_mobile', // Users created via web admin are for mobile app access
-      smartid_hub_role: primary_role,
+      primary_system: 'time_mobile', // Users created via TIME web admin are for mobile app access
+      smartid_time_role: primary_role,
       ic_number,
       email: email || null,
       phone: phone || null,
@@ -201,75 +201,27 @@ export async function GET(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // First try with palm columns, if they don't exist, try without
-    let users, error
-    
-    try {
-      const { data, error: palmError } = await serviceSupabase
-        .from('users')
-        .select(`
-          id,
-          full_name,
-          employee_id,
-          primary_role,
-          smartid_hub_role,
-          email,
-          ic_number,
-          phone,
-          institution_id,
-          status,
-          palm_id,
-          palm_enrolled_at,
-          last_palm_scan,
-          palm_scan_count,
-          palm_status,
-          palm_quality,
-          created_at,
-          updated_at
-        `)
-        .eq('institution_id', institutionId)
-        .eq('status', 'active')
-        .order('full_name', { ascending: true })
-      
-      users = data
-      error = palmError
-    } catch (palmError) {
-      // If palm columns don't exist, fetch without them
-      console.warn('Palm columns not found, fetching basic user data:', palmError)
-      
-      const { data, error: basicError } = await serviceSupabase
-        .from('users')
-        .select(`
-          id,
-          full_name,
-          employee_id,
-          primary_role,
-          smartid_hub_role,
-          email,
-          ic_number,
-          phone,
-          institution_id,
-          status,
-          created_at,
-          updated_at
-        `)
-        .eq('institution_id', institutionId)
-        .eq('status', 'active')
-        .order('full_name', { ascending: true })
-      
-      // Add default palm values
-      users = data?.map(user => ({
-        ...user,
-        palm_id: null,
-        palm_enrolled_at: null,
-        last_palm_scan: null,
-        palm_scan_count: 0,
-        palm_status: 'pending',
-        palm_quality: null
-      })) || []
-      
-      error = basicError
-    }
+    // Fetch users with only the columns we know exist
+    const { data: users, error } = await serviceSupabase
+      .from('users')
+      .select(`
+        id,
+        full_name,
+        employee_id,
+        primary_role,
+        primary_system,
+        smartid_time_role,
+        email,
+        ic_number,
+        phone,
+        institution_id,
+        status,
+        created_at,
+        updated_at
+      `)
+      .eq('institution_id', institutionId)
+      .eq('status', 'active')
+      .order('full_name', { ascending: true })
 
     if (error) {
       console.error('Error fetching users:', error)

@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
-    const { id } = params
+    const { id } = await params
 
     // Get specific leave type
     const { data: leaveType, error } = await supabase
@@ -83,7 +83,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
 
     const {
@@ -180,7 +180,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
-    const { id } = params
+    const { id } = await params
 
     // Check if leave type has any active applications
     const { data: applications, error: applicationError } = await supabase

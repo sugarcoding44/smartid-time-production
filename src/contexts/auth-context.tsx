@@ -119,28 +119,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      console.log('🔍 Fetching profile for user:', userId)
+      console.log('🔍 Fetching profile for user ID:', userId)
       
-      // Add timeout to prevent infinite loading
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
-      )
+      // Get the authenticated user's email for additional lookup
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      const userEmail = authUser?.email
+      console.log('📧 Auth user email:', userEmail)
       
-      // First try simple query without joins - use auth_user_id to match Supabase auth user
-      const queryPromise = supabase
+      // Try multiple approaches to find the user
+      let userData = null
+      let userError = null
+      
+      // Approach 1: Try by auth_user_id
+      const { data: byAuthId, error: authIdError } = await supabase
         .from('users')
         .select('*')
         .eq('auth_user_id', userId)
         .maybeSingle()
       
-      let userData, userError
-      try {
-        const result = await Promise.race([queryPromise, timeoutPromise])
-        userData = result.data
-        userError = result.error
-      } catch (timeoutError) {
-        console.log('⏰ Profile fetch timed out, will create temporary profile')
-        throw timeoutError
+      if (byAuthId && !authIdError) {
+        console.log('✅ Found user by auth_user_id')
+        userData = byAuthId
+      } else {
+        // Approach 2: Try by ID (for cases where auth ID = user ID)
+        const { data: byId, error: idError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle()
+        
+        if (byId && !idError) {
+          console.log('✅ Found user by ID')
+          userData = byId
+        } else if (userEmail) {
+          // Approach 3: Try by email as last resort
+          const { data: byEmail, error: emailError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', userEmail)
+            .maybeSingle()
+          
+          if (byEmail && !emailError) {
+            console.log('✅ Found user by email')
+            userData = byEmail
+          } else {
+            userError = emailError || idError || authIdError
+          }
+        } else {
+          userError = idError || authIdError
+        }
       }
 
       console.log('📊 User query result:', { userData, userError })
@@ -171,14 +198,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         
         // User profile exists
+        // Map the role based on primary_system and roles
+        let role: UserRole = 'staff' // default
+        
+        // Check TIME roles first (for TIME portal users)
+        if (userData.primary_system === 'time_web' || userData.primary_system === 'time_mobile') {
+          // For TIME system, use smartid_hub_role if available, otherwise fall back to primary_role
+          const timeRole = userData.smartid_hub_role || userData.primary_role
+          
+          if (timeRole === 'superadmin') {
+            role = 'superadmin'
+          } else if (timeRole === 'admin') {
+            role = 'admin'
+          } else if (timeRole === 'hr_manager') {
+            role = 'hr_manager'
+          } else if (userData.primary_role === 'teacher') {
+            role = 'teacher'
+          } else if (userData.primary_role === 'student') {
+            role = 'student'
+          }
+        } else {
+          // For other systems, use primary_role
+          if (userData.primary_role === 'admin' || userData.primary_role === 'owner') {
+            role = 'admin'
+          } else if (userData.primary_role === 'teacher') {
+            role = 'teacher'
+          } else if (userData.primary_role === 'student') {
+            role = 'student'
+          } else {
+            role = userData.primary_role as UserRole || 'staff'
+          }
+        }
+        
         setProfile({
           id: userData.id,
           full_name: userData.full_name,
           email: userData.email,
-          role: (userData.smartid_hub_role || userData.primary_role) as UserRole,
+          role: role,
           institution_id: userData.institution_id,
-          employee_id: userData.employee_id,
-          avatar_url: userData.avatar_url,
+          employee_id: userData.employee_id || `EMP${Date.now()}`,
+          avatar_url: userData.avatar_url || undefined,
           subscription_plan: subscriptionPlan as 'free' | 'premium'
         })
       } else {
@@ -241,13 +300,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { error: profileError } = await supabase
           .from('users')
           .insert({
-            id: data.user.id,
+            auth_user_id: data.user.id,
             email,
             full_name: userData.full_name || '',
             primary_role: userData.role || 'student',
             smartid_hub_role: userData.role || 'student',
             institution_id: userData.institution_id,
-            employee_id: userData.employee_id || `EMP${Date.now()}`
+            employee_id: userData.employee_id || `EMP${Date.now()}`,
+            ic_number: '0000000000000', // Required field - should be provided in real implementation
+            phone: '0000000000', // Required field - should be provided in real implementation
+            primary_system: 'time_web' // Default to TIME system
           })
 
       if (profileError) {

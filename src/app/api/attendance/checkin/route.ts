@@ -89,15 +89,18 @@ export async function OPTIONS() {
 }
 
 export async function POST(request: NextRequest) {
+  let type = 'attendance' // Default value for error handling
   try {
+    const body = await request.json()
     const { 
       userId, 
       employeeId,
-      type = 'check_in', // 'check_in' or 'check_out'
       location,
       manual = false,
       method = 'manual' // 'palm', 'smart_card', 'manual_web', 'manual_mobile'
-    } = await request.json()
+    } = body
+    
+    type = body.type || 'check_in' // 'check_in' or 'check_out'
     
     if (!userId && !employeeId) {
       return NextResponse.json(

@@ -22,25 +22,27 @@ export async function GET(request: NextRequest) {
     // Verify token and get user info
     const { data: tokenData, error: tokenError } = await serviceSupabase
       .from('user_setup_tokens')
-      .select(`
-        id,
-        user_id,
-        expires_at,
-        used_at,
-        users (
-          id,
-          full_name,
-          employee_id,
-          email,
-          primary_role
-        )
-      `)
+      .select('id, user_id, expires_at, used_at')
       .eq('token', token)
       .single()
 
     if (tokenError || !tokenData) {
       return NextResponse.json(
         { error: 'Invalid or expired setup token' },
+        { status: 400 }
+      )
+    }
+    
+    // Get user data
+    const { data: userData, error: userError } = await serviceSupabase
+      .from('users')
+      .select('id, full_name, employee_id, email, primary_role')
+      .eq('id', tokenData.user_id)
+      .single()
+      
+    if (userError || !userData) {
+      return NextResponse.json(
+        { error: 'User not found' },
         { status: 400 }
       )
     }
@@ -63,7 +65,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      user: tokenData.users,
+      user: userData,
       tokenId: tokenData.id
     })
 
@@ -111,23 +113,27 @@ export async function POST(request: NextRequest) {
     // Verify token
     const { data: tokenData, error: tokenError } = await serviceSupabase
       .from('user_setup_tokens')
-      .select(`
-        id,
-        user_id,
-        expires_at,
-        used_at,
-        users (
-          id,
-          full_name,
-          email
-        )
-      `)
+      .select('id, user_id, expires_at, used_at')
       .eq('token', token)
       .single()
 
     if (tokenError || !tokenData) {
       return NextResponse.json(
         { error: 'Invalid setup token' },
+        { status: 400 }
+      )
+    }
+    
+    // Get user data
+    const { data: userData, error: userError } = await serviceSupabase
+      .from('users')
+      .select('id, full_name, email')
+      .eq('id', tokenData.user_id)
+      .single()
+      
+    if (userError || !userData) {
+      return NextResponse.json(
+        { error: 'User not found' },
         { status: 400 }
       )
     }
@@ -150,11 +156,11 @@ export async function POST(request: NextRequest) {
 
     // Create the user in Supabase Auth
     const { data: authUser, error: authError } = await serviceSupabase.auth.admin.createUser({
-      email: tokenData.users.email,
+      email: userData.email,
       password: password,
       email_confirm: true, // Auto-confirm email since it was verified during registration
       user_metadata: {
-        full_name: tokenData.users?.full_name || '',
+        full_name: userData.full_name || '',
         setup_completed: true,
       }
     })

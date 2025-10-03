@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPalmScannerService } from '@/lib/palm-scanner/scanner-service'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient()
     const { 
       user_id,
       hand_type = 'right',
@@ -13,6 +12,12 @@ export async function POST(request: NextRequest) {
     } = await request.json()
 
     console.log(`Starting palm verification for user ${user_id || 'unknown'}`)
+
+    // Create service client for database operations
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
     const scannerService = getPalmScannerService()
     
@@ -147,8 +152,7 @@ export async function POST(request: NextRequest) {
       await supabase
         .from('palm_templates')
         .update({ 
-          last_used: new Date().toISOString(),
-          verification_count: supabase.sql`verification_count + 1`
+          last_used: new Date().toISOString()
         })
         .eq('id', verificationResult.matched_template_id)
     }
