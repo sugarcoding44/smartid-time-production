@@ -13,7 +13,12 @@ export async function POST(request: NextRequest) {
       adminEmail,
       adminIcNumber,
       adminPassword,
-      subscriptionPlan
+      subscriptionPlan,
+      // Location data
+      address,
+      latitude,
+      longitude,
+      attendanceRadius
     } = body
 
     // Create a Supabase client with anon key for auth operations
@@ -44,7 +49,12 @@ export async function POST(request: NextRequest) {
             subscription_plan: subscriptionPlan,
             contact_person: adminName,
             email: adminEmail,
-            admin_ic_number: adminIcNumber
+            admin_ic_number: adminIcNumber,
+            // Location data
+            address: address,
+            latitude: latitude,
+            longitude: longitude,
+            attendance_radius: attendanceRadius
           })
         }
       }

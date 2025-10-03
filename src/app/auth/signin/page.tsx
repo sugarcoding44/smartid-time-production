@@ -77,7 +77,7 @@ export default function SignInPage() {
   return (
     <AuthLayout
       title="Welcome Back"
-      subtitle="Sign in to your smartID HUB account"
+      subtitle="Sign in to your smartID TIME account"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>

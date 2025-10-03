@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { InstitutionLocationStep } from './institution-location-step'
 import { 
   Building2, 
   User, 
@@ -28,8 +27,7 @@ import {
   Zap,
   Shield,
   Clock,
-  ChartBar,
-  MapPin
+  ChartBar
 } from 'lucide-react'
 
 interface InstitutionRegisterFormProps {
@@ -47,16 +45,12 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
     adminIcNumber: '',
     adminPassword: '',
     confirmPassword: '',
-    subscriptionPlan: 'free' as 'free' | 'premium',
-    address: '',
-    latitude: 0,
-    longitude: 0,
-    attendanceRadius: 300
+    subscriptionPlan: 'free' as 'free' | 'premium'
   })
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
-  const totalSteps = 5
+  const totalSteps = 4
 
   const handleSubmit = async () => {
     setLoading(true)
@@ -73,11 +67,7 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
           adminEmail: formData.adminEmail,
           adminIcNumber: formData.adminIcNumber,
           adminPassword: formData.adminPassword,
-          subscriptionPlan: formData.subscriptionPlan,
-          address: formData.address,
-          latitude: formData.latitude,
-          longitude: formData.longitude,
-          attendanceRadius: formData.attendanceRadius
+          subscriptionPlan: formData.subscriptionPlan
         })
       })
 
@@ -126,30 +116,23 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
         }
         return true
       
-          case 3:
-            if (!formData.adminPassword || !formData.confirmPassword) {
-              toast.error('Please enter password')
-              return false
-            }
-            if (formData.adminPassword.length < 6) {
-              toast.error('Password must be at least 6 characters')
-              return false
-            }
-            if (formData.adminPassword !== formData.confirmPassword) {
-              toast.error('Passwords do not match')
-              return false
-            }
-            return true
-            
-          case 4:
-            if (!formData.address || !formData.latitude || !formData.longitude) {
-              toast.error('Please select institution location')
-              return false
-            }
-            return true
-          
-          default:
-            return true
+      case 3:
+        if (!formData.adminPassword || !formData.confirmPassword) {
+          toast.error('Please enter password')
+          return false
+        }
+        if (formData.adminPassword.length < 6) {
+          toast.error('Password must be at least 6 characters')
+          return false
+        }
+        if (formData.adminPassword !== formData.confirmPassword) {
+          toast.error('Passwords do not match')
+          return false
+        }
+        return true
+      
+      default:
+        return true
     }
   }
 
@@ -172,9 +155,9 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <div className="w-full max-w-3xl mx-auto">
       {/* Progress Steps */}
-      <div className="mb-6">
+      <div className="mb-8">
         <div className="flex items-center justify-between relative">
           {/* Progress Line */}
           <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200 dark:bg-gray-700 -z-10">
@@ -185,21 +168,21 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
           </div>
           
           {/* Step Indicators */}
-          {[1, 2, 3, 4, 5].map((step) => (
+          {[1, 2, 3, 4].map((step) => (
             <div key={step} className="flex flex-col items-center">
               <div 
-                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
+                className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-300 ${
                   step <= currentStep 
                     ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg' 
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-500'
                 }`}
               >
-                {step < currentStep ? <Check className="w-4 h-4" /> : step}
+                {step < currentStep ? <Check className="w-5 h-5" /> : step}
               </div>
               <span className={`text-xs mt-2 font-medium ${
                 step <= currentStep ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'
               }`}>
-                {step === 1 ? 'Institution' : step === 2 ? 'Administrator' : step === 3 ? 'Security' : step === 4 ? 'Location' : 'Plan'}
+                {step === 1 ? 'Institution' : step === 2 ? 'Administrator' : step === 3 ? 'Security' : 'Plan'}
               </span>
             </div>
           ))}
@@ -207,11 +190,11 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
       </div>
 
       {/* Step Content */}
-      <Card className="p-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+      <Card className="p-8 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-200/50 dark:border-gray-700/50">
         {/* Step 1: Institution Details */}
         {currentStep === 1 && (
           <div className="space-y-6 animate-in fade-in-50 duration-500">
-            <div className="text-center mb-6">
+            <div className="text-center mb-8">
               <div className="inline-flex p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl mb-4">
                 <Building2 className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
               </div>
@@ -219,7 +202,7 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
               <p className="text-gray-600 dark:text-gray-400">Let's start with some basic information</p>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div>
                 <Label htmlFor="institutionName" className="text-base font-medium mb-2 block">
                   Institution Name *
@@ -291,7 +274,7 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
               <p className="text-gray-600 dark:text-gray-400">This will be the primary admin for your institution</p>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div>
                 <Label htmlFor="adminName" className="text-base font-medium mb-2 block">
                   Full Name *
@@ -353,7 +336,7 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
               <p className="text-gray-600 dark:text-gray-400">Choose a strong password for your admin account</p>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div>
                 <Label htmlFor="adminPassword" className="text-base font-medium mb-2 block">
                   Password *
@@ -410,37 +393,8 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
           </div>
         )}
 
-        {/* Step 4: Location */}
+        {/* Step 4: Choose Plan */}
         {currentStep === 4 && (
-          <div className="space-y-6 animate-in fade-in-50 duration-500">
-            <div className="text-center mb-6">
-              <div className="inline-flex p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl mb-4">
-                <MapPin className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-              </div>
-              <h2 className="text-2xl font-bold mb-2">Institution Location</h2>
-              <p className="text-gray-600 dark:text-gray-400">Set your location for attendance tracking</p>
-            </div>
-
-            <InstitutionLocationStep
-              locationData={{
-                address: formData.address,
-                latitude: formData.latitude,
-                longitude: formData.longitude,
-                attendanceRadius: formData.attendanceRadius
-              }}
-              onLocationChange={(data) => {
-                setFormData(prev => ({
-                  ...prev,
-                  ...data
-                }))
-              }}
-              disabled={loading}
-            />
-          </div>
-        )}
-
-        {/* Step 5: Choose Plan */}
-        {currentStep === 5 && (
           <div className="space-y-6 animate-in fade-in-50 duration-500">
             <div className="text-center mb-8">
               <div className="inline-flex p-3 bg-amber-100 dark:bg-amber-900/30 rounded-2xl mb-4">
@@ -455,9 +409,9 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
               <button
                 type="button"
                 onClick={() => updateFormData('subscriptionPlan', 'free')}
-                className={`relative p-5 rounded-xl border-2 transition-all text-left ${
+                className={`relative p-6 rounded-2xl border-2 transition-all text-left ${
                   formData.subscriptionPlan === 'free'
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 shadow-lg scale-[1.02]'
                     : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
                 }`}
                 disabled={loading}
@@ -470,36 +424,36 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
                   </div>
                 )}
                 
-                <div className="flex items-start justify-between mb-3">
+                <div className="flex items-start justify-between mb-4">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <Users className="w-5 h-5 text-blue-500" />
-                      <h3 className="text-lg font-bold">Free Forever</h3>
+                      <Users className="w-6 h-6 text-blue-500" />
+                      <h3 className="text-xl font-bold">Free Forever</h3>
                     </div>
-                    <p className="text-2xl font-bold">RM 0<span className="text-sm font-normal text-gray-500">/month</span></p>
+                    <p className="text-3xl font-bold">RM 0<span className="text-sm font-normal text-gray-500">/month</span></p>
                   </div>
                 </div>
                 
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                   Perfect for small institutions getting started
                 </p>
                 
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-green-500 mt-0.5" />
-                    <span>User Management</span>
+                    <span>Up to 100 users</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-green-500 mt-0.5" />
-                    <span>Basic Enrollment & Records</span>
+                    <span>Basic attendance tracking</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-green-500 mt-0.5" />
-                    <span>Biometric Integration</span>
+                    <span>User management</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-green-500 mt-0.5" />
-                    <span>Basic Dashboard</span>
+                    <span>Basic reporting</span>
                   </li>
                 </ul>
               </button>
@@ -508,9 +462,9 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
               <button
                 type="button"
                 onClick={() => updateFormData('subscriptionPlan', 'premium')}
-                className={`relative p-5 rounded-xl border-2 transition-all text-left ${
+                className={`relative p-6 rounded-2xl border-2 transition-all text-left ${
                   formData.subscriptionPlan === 'premium'
-                    ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30'
+                    ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30 shadow-lg scale-[1.02]'
                     : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
                 }`}
                 disabled={loading}
@@ -529,17 +483,17 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
                   </Badge>
                 </div>
                 
-                <div className="flex items-start justify-between mb-3 mt-2">
+                <div className="flex items-start justify-between mb-4 mt-2">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <Crown className="w-5 h-5 text-amber-500" />
-                      <h3 className="text-lg font-bold">Premium</h3>
+                      <Crown className="w-6 h-6 text-amber-500" />
+                      <h3 className="text-xl font-bold">Premium</h3>
                     </div>
-                    <p className="text-2xl font-bold">RM 100<span className="text-sm font-normal text-gray-500">/month</span></p>
+                    <p className="text-3xl font-bold">RM 100<span className="text-sm font-normal text-gray-500">/month</span></p>
                   </div>
                 </div>
                 
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                   Complete workforce management solution
                 </p>
                 
@@ -550,15 +504,23 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-green-500 mt-0.5" />
-                    <span>Attendance & Leave Management</span>
+                    <span>Unlimited users</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-green-500 mt-0.5" />
-                    <span>Analytics & Custom Reports</span>
+                    <span>Advanced attendance & leave management</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-green-500 mt-0.5" />
-                    <span>Priority Support</span>
+                    <span>Work group scheduling</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-500 mt-0.5" />
+                    <span>Analytics & custom reports</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-500 mt-0.5" />
+                    <span>Priority support</span>
                   </li>
                 </ul>
               </button>
@@ -574,7 +536,7 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
         )}
 
         {/* Navigation Buttons */}
-        <div className="flex justify-between mt-6">
+        <div className="flex justify-between mt-8">
           {currentStep > 1 && (
             <Button
               type="button"

@@ -6,8 +6,8 @@ import { InstitutionRegisterForm } from '@/components/auth/institution-register-
 export default function SignupPage() {
   return (
     <AuthLayout
-      title="Get Started"
-      subtitle="Register your institution to start using SmartID HUB"
+      title="Create Your Account"
+      subtitle="Join thousands of institutions already using SmartID TIME"
     >
       <InstitutionRegisterForm />
     </AuthLayout>

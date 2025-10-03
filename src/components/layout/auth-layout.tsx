@@ -29,7 +29,7 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
             <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center text-white font-extrabold shadow-lg">
               s
             </div>
-            smartID HUB
+            smartID TIME
           </Link>
         </div>
 
@@ -45,7 +45,7 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-gray-500 dark:text-gray-400">
-          <p>&copy; 2025 smartID HQ. All rights reserved.</p>
+          <p>&copy; 2025 smartID TIME. All rights reserved.</p>
         </div>
       </div>
     </div>
