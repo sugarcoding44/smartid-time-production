@@ -18,20 +18,27 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setMounted(true)
-    // Check for saved theme or system preference
+    // Check for saved theme, default to light mode (ignore system preference)
     const savedTheme = localStorage.getItem('theme') as Theme
-    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-    setTheme(savedTheme || systemTheme)
+    setTheme(savedTheme || 'light')
   }, [])
 
   useEffect(() => {
     if (mounted) {
       localStorage.setItem('theme', theme)
+      
+      // Force remove any existing theme classes
+      document.documentElement.classList.remove('dark', 'light')
+      
+      // Add the current theme class
       if (theme === 'dark') {
         document.documentElement.classList.add('dark')
       } else {
-        document.documentElement.classList.remove('dark')
+        document.documentElement.classList.add('light')
       }
+      
+      // Override any system color-scheme preference
+      document.documentElement.style.colorScheme = theme
     }
   }, [theme, mounted])
 

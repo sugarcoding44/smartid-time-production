@@ -10,12 +10,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
-import { Building2, Users, Clock, Grid3X3, List, Plus, UserPlus, Edit, Trash2, Search } from 'lucide-react'
+import { Building2, Users, Clock, Grid3X3, List, Plus, UserPlus, Edit, Trash2, Search, ChevronDown, ChevronRight, UserMinus } from 'lucide-react'
 
 type WorkGroup = {
   id: string
   name: string
-  description: string
+  description: string | null
   schedule_start: string
   schedule_end: string
   break_start: string
@@ -45,6 +45,7 @@ export default function WorkGroupsPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
   // Form state
   const [formData, setFormData] = useState({
@@ -369,7 +370,7 @@ export default function WorkGroupsPage() {
     setSelectedGroup(group)
     setFormData({
       name: group.name,
-      description: group.description,
+      description: group.description || '',
       schedule_start: group.schedule_start.substring(0, 5),
       schedule_end: group.schedule_end.substring(0, 5),
       break_start: group.break_start.substring(0, 5),
@@ -392,39 +393,145 @@ export default function WorkGroupsPage() {
 
   const openAssignModal = (group: WorkGroup) => {
     setSelectedGroup(group)
-    setSelectedUsers(group.members?.map(m => m.id) || [])
+    // Pre-select existing members
+    const existingMemberIds = group.members?.map(m => m.id) || []
+    setSelectedUsers(existingMemberIds)
     setIsAssignModalOpen(true)
   }
 
   const handleAssignUsers = async () => {
     try {
-      if (!selectedGroup) return
+      if (!selectedGroup || !currentUser) {
+        toast.error('Missing required information')
+        return
+      }
 
-      // Mock assign users - in real implementation, call /api/work-groups/:id/assign-users
-      const updatedGroups = workGroups.map(group =>
-        group.id === selectedGroup.id
-          ? {
-              ...group,
-              member_count: selectedUsers.length,
-              members: users.filter(u => selectedUsers.includes(u.id))
-            }
-          : group
-      )
+      if (selectedUsers.length === 0) {
+        toast.error('Please select at least one user')
+        return
+      }
 
-      setWorkGroups(updatedGroups)
-      setIsAssignModalOpen(false)
-      setSelectedGroup(null)
-      setSelectedUsers([])
-      toast.success('Users assigned successfully')
+      console.log('🔄 Assigning users to work group:', {
+        workGroupId: selectedGroup.id,
+        selectedUsers,
+        assignedBy: currentUser.id
+      })
+
+      const response = await fetch(`/api/work-groups/${selectedGroup.id}/assign-users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          user_ids: selectedUsers,
+          assigned_by_user_id: currentUser.id
+        })
+      })
+
+      const result = await response.json()
+
+      console.log('📊 Assignment API Response:', { 
+        status: response.status, 
+        ok: response.ok,
+        result 
+      })
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to assign users')
+      }
+
+      if (result.success) {
+        // Refresh the data to get updated member counts and lists
+        if (currentUser.institution_id) {
+          await loadWorkGroups(currentUser.institution_id)
+        }
+        
+        setIsAssignModalOpen(false)
+        setSelectedGroup(null)
+        setSelectedUsers([])
+        toast.success(`Successfully assigned ${selectedUsers.length} users to work group`)
+        
+        console.log('✅ Users assigned successfully')
+      } else {
+        throw new Error(result.error || 'Failed to assign users')
+      }
     } catch (error) {
-      console.error('Error assigning users:', error)
-      toast.error('Failed to assign users')
+      console.error('❌ Error assigning users:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to assign users')
     }
+  }
+
+  const handleUnassignUser = async (groupId: string, userId: string, userName: string) => {
+    try {
+      if (!currentUser) {
+        toast.error('Authentication required')
+        return
+      }
+
+      if (!confirm(`Are you sure you want to remove ${userName} from this work group?`)) {
+        return
+      }
+
+      console.log('🔄 Unassigning user from work group:', {
+        workGroupId: groupId,
+        userId,
+        updatedBy: currentUser.id
+      })
+
+      const response = await fetch(`/api/work-groups/${groupId}/assign-users`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          user_ids: [userId],
+          updated_by_user_id: currentUser.id
+        })
+      })
+
+      const result = await response.json()
+
+      console.log('📊 Unassignment API Response:', { 
+        status: response.status, 
+        ok: response.ok,
+        result 
+      })
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to unassign user')
+      }
+
+      if (result.success) {
+        // Refresh the data to get updated member counts and lists
+        if (currentUser.institution_id) {
+          await loadWorkGroups(currentUser.institution_id)
+        }
+        
+        toast.success(`Successfully removed ${userName} from work group`)
+        
+        console.log('✅ User unassigned successfully')
+      } else {
+        throw new Error(result.error || 'Failed to unassign user')
+      }
+    } catch (error) {
+      console.error('❌ Error unassigning user:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to unassign user')
+    }
+  }
+
+  const toggleGroupExpansion = (groupId: string) => {
+    const newExpanded = new Set(expandedGroups)
+    if (newExpanded.has(groupId)) {
+      newExpanded.delete(groupId)
+    } else {
+      newExpanded.add(groupId)
+    }
+    setExpandedGroups(newExpanded)
   }
 
   const filteredWorkGroups = workGroups.filter(group =>
     group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    group.description.toLowerCase().includes(searchTerm.toLowerCase())
+    (group.description || '').toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   if (loading) {
@@ -441,11 +548,13 @@ export default function WorkGroupsPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="bg-white dark:bg-gradient-to-br dark:from-violet-900 dark:to-purple-900 rounded-2xl p-6 border-0 shadow-lg dark:border dark:border-purple-800/50">
+        <div className="rounded-2xl p-6 border-0 shadow-lg header-card">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Work Groups 👥</h1>
-              <p className="text-gray-600 dark:text-purple-200/90">Manage work schedules and group assignments for your institution</p>
+              <h1 className="text-3xl font-bold text-white mb-2">
+                Work Groups
+              </h1>
+              <p className="text-white/90 opacity-90">Manage work schedules and group assignments for your institution</p>
             </div>
             <div className="mt-4 lg:mt-0">
               <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
@@ -556,36 +665,36 @@ export default function WorkGroupsPage() {
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
             <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                <Building2 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <div className="w-12 h-12 mx-auto mb-4 bg-blue-600 rounded-full flex items-center justify-center">
+                <Building2 className="w-6 h-6 text-white" />
               </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">{workGroups.length}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Total Work Groups</div>
+              <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">{workGroups.length}</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">Total Work Groups</div>
             </CardContent>
           </Card>
           
-          <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
+          <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
             <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
-                <Users className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <div className="w-12 h-12 mx-auto mb-4 bg-green-600 rounded-full flex items-center justify-center">
+                <Users className="w-6 h-6 text-white" />
               </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">
                 {workGroups.reduce((sum, group) => sum + group.member_count, 0)}
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Total Members</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">Total Members</div>
             </CardContent>
           </Card>
           
-          <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
+          <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
             <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center">
-                <Clock className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+              <div className="w-12 h-12 mx-auto mb-4 bg-indigo-600 rounded-full flex items-center justify-center">
+                <Clock className="w-6 h-6 text-white" />
               </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">8.5h</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Average Hours</div>
+              <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-1">8.5h</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">Average Hours</div>
             </CardContent>
           </Card>
         </div>
@@ -616,7 +725,7 @@ export default function WorkGroupsPage() {
                       {group.name}
                     </CardTitle>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      {group.description}
+                      {group.description || 'No description provided'}
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -661,9 +770,23 @@ export default function WorkGroupsPage() {
                   </div>
                   
                   <div className="bg-green-50 dark:bg-green-900 rounded-lg p-3">
-                    <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
-                      <Users className="w-4 h-4" />
-                      <span className="text-sm font-medium">Members</span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                        <Users className="w-4 h-4" />
+                        <span className="text-sm font-medium">Members</span>
+                      </div>
+                      {group.member_count > 0 && (
+                        <button
+                          onClick={() => toggleGroupExpansion(group.id)}
+                          className="p-1 hover:bg-green-100 dark:hover:bg-green-800 rounded"
+                        >
+                          {expandedGroups.has(group.id) ? (
+                            <ChevronDown className="w-4 h-4 text-green-600 dark:text-green-400" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-green-600 dark:text-green-400" />
+                          )}
+                        </button>
+                      )}
                     </div>
                     <div className="text-sm text-green-600 dark:text-green-400 mt-1">
                       {group.member_count} people
@@ -679,6 +802,61 @@ export default function WorkGroupsPage() {
                     Working Days: {formatWorkingDays(group.working_days)}
                   </div>
                 </div>
+                
+                {/* Expandable member list */}
+                {expandedGroups.has(group.id) && group.members && group.members.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                      Assigned Members ({group.members.length})
+                    </h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {group.members.map((member: User) => (
+                        <div key={member.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                              {member.full_name.charAt(0)}
+                            </div>
+                            <div>
+                              <div className="font-medium text-gray-900 dark:text-white text-sm">
+                                {member.full_name}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {member.employee_id} • {member.primary_role}
+                              </div>
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleUnassignUser(group.id, member.id, member.full_name)}
+                            className="p-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 border-red-200 hover:border-red-300"
+                            title="Remove from work group"
+                          >
+                            <UserMinus className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* No members message */}
+                {expandedGroups.has(group.id) && (!group.members || group.members.length === 0) && (
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600 text-center">
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      No members assigned to this work group
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openAssignModal(group)}
+                      className="mt-2 text-blue-600 hover:text-blue-700"
+                    >
+                      <UserPlus className="w-4 h-4 mr-1" />
+                      Assign Users
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}

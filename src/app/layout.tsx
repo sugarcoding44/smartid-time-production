@@ -19,6 +19,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "SmartID - Cloud Enterprise Software",
   description: "Free cloud-based enterprise software for corporate and educational institutions. Manage attendance with facial recognition, run cashless cafeterias, and enable e-wallet transactions.",
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+  },
+  other: {
+    'color-scheme': 'light dark',
+  },
 };
 
 export default function RootLayout({

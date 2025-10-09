@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { PalmEnrollmentModal } from '@/components/features/palm-enrollment-modal'
 import { toast } from 'sonner'
 import { Users, Hand, CheckCircle, Clock, XCircle, TrendingUp, AlertTriangle } from 'lucide-react'
+import { HeaderSkeleton, StatCardSkeleton, TableSkeleton, ActivityFeedSkeleton } from '@/components/ui/loading-skeletons'
 import type { Database } from '@/types/database'
 
 type User = Database['public']['Tables']['users']['Row']
@@ -383,8 +384,38 @@ export default function PalmManagementPage() {
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="space-y-8">
+          <HeaderSkeleton />
+          
+          {/* Statistics Cards Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+          </div>
+          
+          {/* Main Content */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              {/* Search and Filter Skeleton */}
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-4 mb-6">
+                <div className="flex gap-4 mb-4">
+                  <div className="h-10 flex-1 bg-gray-200 dark:bg-slate-700 animate-pulse rounded" />
+                  <div className="h-10 w-32 bg-gray-200 dark:bg-slate-700 animate-pulse rounded" />
+                  <div className="h-10 w-24 bg-gray-200 dark:bg-slate-700 animate-pulse rounded" />
+                </div>
+                <div className="h-4 w-32 bg-gray-200 dark:bg-slate-700 animate-pulse rounded" />
+              </div>
+              
+              <TableSkeleton rows={8} />
+            </div>
+            <div className="space-y-6">
+              <ActivityFeedSkeleton items={8} />
+            </div>
+          </div>
         </div>
       </DashboardLayout>
     )
@@ -394,7 +425,7 @@ export default function PalmManagementPage() {
     <DashboardLayout>
       <div className="space-y-8">
         {/* Gradient Header with Device Status */}
-        <div className="bg-white dark:bg-gradient-to-br dark:from-violet-900 dark:to-purple-900 rounded-2xl p-8 border-0 shadow-lg dark:border dark:border-purple-800/50">
+        <div className="rounded-2xl p-8 border-0 shadow-lg header-card">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
@@ -473,69 +504,69 @@ export default function PalmManagementPage() {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
-          <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+          <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
             <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <div className="w-12 h-12 mx-auto mb-4 bg-blue-600 rounded-full flex items-center justify-center">
+                <Users className="w-6 h-6 text-white" />
               </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Total Users</div>
+              <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">{stats.total}</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">Total Users</div>
             </CardContent>
           </Card>
 
           {/* Highlight Not Enrolled - Most Important */}
-          <Card className={`border-0 shadow-lg ${stats.notEnrolled > 0 ? 'bg-gradient-to-br from-orange-50 to-red-50 border-orange-200 dark:from-orange-900/20 dark:to-red-900/20 dark:border-orange-700' : 'bg-white dark:bg-slate-800'}`}>
+          <Card className={`border-gray-200 dark:border-slate-700 shadow-sm ${stats.notEnrolled > 0 ? 'bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20' : 'bg-white dark:bg-slate-800'}`}>
             <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              <div className="w-12 h-12 mx-auto mb-4 bg-orange-600 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-white" />
               </div>
-              <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+              <div className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-1">
                 {stats.notEnrolled}
               </div>
-              <div className="text-sm text-orange-700 dark:text-orange-300 font-medium">
+              <div className="text-sm text-gray-500 dark:text-slate-400">
                 Not Enrolled
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
+          <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
             <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <div className="w-12 h-12 mx-auto mb-4 bg-green-600 rounded-full flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-white" />
               </div>
-              <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.active}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Active</div>
+              <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">{stats.active}</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">Active</div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
+          <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
             <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center">
-                <Clock className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <div className="w-12 h-12 mx-auto mb-4 bg-amber-600 rounded-full flex items-center justify-center">
+                <Clock className="w-6 h-6 text-white" />
               </div>
-              <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{stats.pending}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Pending</div>
+              <div className="text-3xl font-bold text-amber-600 dark:text-amber-400 mb-1">{stats.pending}</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">Pending</div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
+          <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
             <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
-                <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <div className="w-12 h-12 mx-auto mb-4 bg-red-600 rounded-full flex items-center justify-center">
+                <XCircle className="w-6 h-6 text-white" />
               </div>
-              <div className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.expired}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Expired</div>
+              <div className="text-3xl font-bold text-red-600 dark:text-red-400 mb-1">{stats.expired}</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">Expired</div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
+          <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
             <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+              <div className="w-12 h-12 mx-auto mb-4 bg-indigo-600 rounded-full flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-white" />
               </div>
-              <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{stats.avgQuality}%</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Avg Quality</div>
+              <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-1">{stats.avgQuality}%</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">Avg Quality</div>
             </CardContent>
           </Card>
         </div>

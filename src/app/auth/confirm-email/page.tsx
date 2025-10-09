@@ -69,7 +69,7 @@ export default function ConfirmEmailPage() {
                 <li>1. Check your email inbox (and spam folder)</li>
                 <li>2. Click the verification link in the email</li>
                 <li>3. Your institution will be set up automatically</li>
-                <li>4. You can then sign in to your SmartID Hub</li>
+                <li>4. You can then sign in to smartID TIME</li>
               </ul>
             </div>
           </div>

@@ -115,10 +115,10 @@ export async function POST(request: NextRequest) {
         email: institutionData.email,
         ic_number: institutionData.admin_ic_number || 'PENDING',
         phone: '+60123456789', // Placeholder - user can update later
-        primary_system: 'hub_web',
+        primary_system: 'time_web',
         primary_role: 'admin',
-        smartid_hub_role: 'admin',
-        employee_id: `ADM${Date.now()}`,
+        smartid_time_role: 'admin',
+        employee_id: `TC-${Date.now()}`, // Using TC- prefix for admin users
         status: 'active',
         email_verified: true // Since they just verified their email
       })

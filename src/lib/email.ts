@@ -21,7 +21,7 @@ interface SendEmailParams {
 export async function sendEmail({ to, subject, html, text }: SendEmailParams) {
   try {
     const info = await transporter.sendMail({
-      from: `"${process.env.FROM_NAME || 'SmartID Hub'}" <${process.env.FROM_EMAIL}>`,
+      from: `"${process.env.FROM_NAME || 'smartID TIME'}" <${process.env.FROM_EMAIL}>`,
       to,
       subject,
       html,
@@ -50,14 +50,14 @@ export const emailTemplates = {
     setupUrl: string
     institutionName?: string
   }) => ({
-    subject: `Welcome to SmartID Hub - Set up your account`,
+    subject: `Welcome to smartID TIME - Set up your account`,
     html: `
       <!DOCTYPE html>
       <html lang="en">
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Welcome to SmartID Hub</title>
+        <title>Welcome to smartID TIME</title>
         <style>
           body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -156,15 +156,15 @@ export const emailTemplates = {
         <div class="container">
           <div class="header">
             <div class="logo">
-              🎓 SmartID
+              🎓 smartID TIME
             </div>
-            <h1 class="title">Welcome to SmartID Hub!</h1>
+            <h1 class="title">Welcome to smartID TIME!</h1>
             <p class="subtitle">Your account has been created successfully</p>
           </div>
 
           <p>Hello <strong>${data.fullName}</strong>,</p>
 
-          <p>Welcome to SmartID Hub! Your account has been created and you're now part of ${data.institutionName || 'your institution'}. Here are your account details:</p>
+          <p>Welcome to smartID TIME! Your account has been created and you're now part of ${data.institutionName || 'your institution'}. Here are your account details:</p>
 
           <div class="info-card">
             <div class="info-row">
@@ -203,7 +203,7 @@ export const emailTemplates = {
           <div style="background: #1e293b; border: 1px solid #334155; padding: 16px; border-radius: 8px; margin: 20px 0;">
             <strong style="color: #60a5fa;">📱 Important: Mobile App Login</strong><br>
             <span style="color: #cbd5e1; font-size: 14px;">
-              These credentials are for the <strong>SmartID Hub Mobile App</strong> only.<br>
+              These credentials are for the <strong>smartID TIME Mobile App</strong> only.<br>
               Download the app and use your email and password to login.<br>
               Web admin access is separate and managed by administrators.
             </span>
@@ -212,14 +212,14 @@ export const emailTemplates = {
           <div class="footer">
             <p>This setup link will expire in 24 hours for security reasons.</p>
             <p>If you didn't expect this email, please contact your system administrator.</p>
-            <p>&copy; 2025 SmartID Hub. All rights reserved.</p>
+            <p>© 2025 smartID TIME. All rights reserved.</p>
           </div>
         </div>
       </body>
       </html>
     `,
     text: `
-      Welcome to SmartID Hub!
+      Welcome to smartID TIME!
 
       Hello ${data.fullName},
 
@@ -232,9 +232,9 @@ export const emailTemplates = {
       To complete your registration, please set up your password by visiting:
       ${data.setupUrl}
 
-      IMPORTANT: These credentials are for the SmartID Hub Mobile App only.
+      IMPORTANT: These credentials are for the smartID TIME Mobile App only.
       After setting your password:
-      1. Download the SmartID Hub Mobile App
+      1. Download the smartID TIME Mobile App
       2. Login using your email and new password
       3. Access attendance, e-wallet, leave requests, and more!
 
@@ -244,7 +244,7 @@ export const emailTemplates = {
 
       If you didn't expect this email, please contact your system administrator.
 
-      © 2025 SmartID Hub. All rights reserved.
+      © 2025 smartID TIME. All rights reserved.
     `
   })
 }

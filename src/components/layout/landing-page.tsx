@@ -5,7 +5,6 @@ import { Header } from './header'
 import { HeroSection } from './hero-section'
 import { EcosystemOverviewSection } from './ecosystem-overview-section'
 import { SimpleFeaturesSection } from './simple-features-section'
-import { HardwareSection } from './hardware-section'
 import { CTASection } from './cta-section'
 import { Footer } from './footer'
 
@@ -17,7 +16,6 @@ export function LandingPage() {
         <HeroSection />
         <EcosystemOverviewSection />
         <SimpleFeaturesSection />
-        <HardwareSection />
         <CTASection />
       </main>
       <Footer />

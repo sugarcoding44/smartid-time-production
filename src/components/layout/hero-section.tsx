@@ -5,10 +5,11 @@ import { useTranslation } from '@/contexts/translation-context'
 
 const dashboardExamples = [
   {
-    title: 'smartID HUB',
+    title: 'smartID TIME',
     subtitle: 'SMK Bukit Jelutong',
     icon: '👥',
     color: 'from-blue-500 via-indigo-600 to-purple-600',
+    deviceType: 'desktop',
     stats: [
       { value: '1,247', label: 'Total Users', color: 'green' },
       { value: '98.5%', label: 'Present Today', color: 'blue' }
@@ -43,8 +44,9 @@ const dashboardExamples = [
   {
     title: 'smartID POS',
     subtitle: 'Cafeteria Management',
-    icon: '🏪',
+    icon: '🏦',
     color: 'from-emerald-500 via-green-600 to-teal-600',
+    deviceType: 'tablet',
     stats: [
       { value: 'RM 2,450', label: 'Today Sales', color: 'emerald' },
       { value: '156', label: 'Orders Today', color: 'blue' }
@@ -93,6 +95,7 @@ const dashboardExamples = [
     subtitle: 'Mobile e-Wallet',
     icon: '💳',
     color: 'from-purple-500 via-pink-500 to-red-600',
+    deviceType: 'phone',
     stats: [
       { value: 'RM 850.00', label: 'Wallet Balance', color: 'purple' },
       { value: '45', label: 'Transactions', color: 'orange' }
@@ -115,6 +118,7 @@ const dashboardExamples = [
 ]
 
 export function HeroSection() {
+  // Updated with Alipay+ style design
   const { t } = useTranslation()
   const [currentExample, setCurrentExample] = useState(0)
 
@@ -127,80 +131,114 @@ export function HeroSection() {
 
   const currentDash = dashboardExamples[currentExample]
   return (
-    <section className="relative min-h-screen flex items-center bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 dark:from-gray-900 dark:via-slate-900 dark:to-indigo-950/30 pt-20 pb-16 overflow-hidden">
-      {/* Modern background decorations */}
-      <div className="absolute inset-0 bg-[linear-gradient(40deg,transparent_40%,rgba(99,102,241,0.08)_50%,transparent_60%)] dark:bg-[linear-gradient(40deg,transparent_40%,rgba(99,102,241,0.05)_50%,transparent_60%)]" />
-      <div className="absolute top-20 -right-32 w-96 h-96 bg-gradient-to-br from-blue-400/20 via-indigo-500/20 to-purple-600/20 rounded-full blur-3xl" />
-      <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-gradient-to-tr from-indigo-400/20 via-purple-500/20 to-pink-600/20 rounded-full blur-3xl" />
+    <section className="relative min-h-screen flex items-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-indigo-950 pt-20 pb-16 overflow-hidden">
+      {/* Alipay+ Style Background Decorations */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(59,130,246,0.08),transparent_50%),radial-gradient(ellipse_at_bottom_left,rgba(139,92,246,0.08),transparent_50%)]" />
+      <div className="absolute top-10 right-10 w-72 h-72 bg-gradient-to-br from-blue-400/15 via-indigo-500/15 to-purple-600/15 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute bottom-10 left-10 w-96 h-96 bg-gradient-to-tr from-indigo-400/10 via-blue-500/10 to-cyan-600/10 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-purple-500/5 rounded-full blur-3xl" />
       
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-20 items-center relative z-10">
-        <div className="space-y-10">
-          <div className="space-y-6">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-full border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
-              <span className="w-2 h-2 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full animate-pulse"></span>
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('completeEcosystem')}</span>
+        <div className="space-y-12">
+          <div className="space-y-8">
+            <div className="inline-flex items-center gap-3 px-6 py-3 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-full border border-blue-200/50 dark:border-blue-700/50 shadow-lg">
+              <span className="w-3 h-3 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full animate-pulse shadow-sm"></span>
+              <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">{t('completeEcosystem')}</span>
             </div>
-            <h1 className="text-5xl lg:text-7xl font-black leading-[1.1] text-gray-900 dark:text-white">
+            <h1 className="text-5xl lg:text-7xl font-black leading-[1.05] text-gray-900 dark:text-white">
               {t('modernSmartID').split(' ')[0]}{' '}
-              <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent drop-shadow-sm">
                 SmartID
               </span>
               <br />
-              <span className="text-4xl lg:text-5xl text-gray-600 dark:text-gray-300 font-semibold">
+              <span className="text-4xl lg:text-5xl text-gray-600 dark:text-gray-300 font-bold">
                 {t('forSchools')}
               </span>
             </h1>
           </div>
           
-          <p className="text-xl lg:text-2xl text-gray-600 dark:text-gray-300 leading-relaxed font-light">
+          <p className="text-xl lg:text-2xl text-gray-600 dark:text-gray-300 leading-relaxed max-w-2xl">
             {t('heroDescription')}
           </p>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-10 max-w-2xl mx-auto">
-            <div className="group relative p-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-                <span className="text-white text-xl">👥</span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="group relative overflow-hidden bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-3xl border border-gray-100 dark:border-gray-700 shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all duration-500">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-indigo-600/5"></div>
+              <div className="relative p-8">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                  <span className="text-white text-2xl">👥</span>
+                </div>
+                <div className="text-lg font-bold text-gray-900 dark:text-white mb-2">{t('hub')}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{t('schoolManagementSystem')}</div>
               </div>
-              <div className="text-base font-bold text-gray-900 dark:text-white">{t('hub')}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('schoolManagementSystem')}</div>
             </div>
-            <div className="group relative p-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-                <span className="text-white text-xl">🏪</span>
+            <div className="group relative overflow-hidden bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-3xl border border-gray-100 dark:border-gray-700 shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all duration-500">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-teal-600/5"></div>
+              <div className="relative p-8">
+                <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                  <span className="text-white text-2xl">🏪</span>
+                </div>
+                <div className="text-lg font-bold text-gray-900 dark:text-white mb-2">{t('pos')}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{t('pointOfSale')}</div>
               </div>
-              <div className="text-base font-bold text-gray-900 dark:text-white">{t('pos')}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('pointOfSale')}</div>
             </div>
-            <div className="group relative p-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform duration-300">
-                <span className="text-white text-xl">💳</span>
+            <div className="group relative overflow-hidden bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-3xl border border-gray-100 dark:border-gray-700 shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all duration-500">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-pink-600/5"></div>
+              <div className="relative p-8">
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                  <span className="text-white text-2xl">💳</span>
+                </div>
+                <div className="text-lg font-bold text-gray-900 dark:text-white mb-2">{t('pay')}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{t('mobileEWallet')}</div>
               </div>
-              <div className="text-base font-bold text-gray-900 dark:text-white">{t('pay')}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('mobileEWallet')}</div>
             </div>
           </div>
           
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button size="lg" asChild className="bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-600 hover:from-blue-600 hover:via-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-4 text-lg">
-              <Link href="/auth/signup">{t('accessSmartIDHUB')}</Link>
+          <div className="flex flex-col sm:flex-row gap-6">
+            <Button size="lg" asChild className="group relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white shadow-xl hover:shadow-2xl transition-all duration-500 px-10 py-6 text-lg font-semibold rounded-2xl">
+              <Link href="/auth/signup" className="relative z-10">
+                <span className="flex items-center gap-2">
+                  {t('accessSmartIDTIME')}
+                  <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  </svg>
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              </Link>
             </Button>
-            <Button size="lg" variant="outline" asChild className="border-2 border-gray-300 dark:border-gray-600 hover:border-indigo-500 dark:hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all duration-300 px-8 py-4 text-lg">
-              <Link href="#features">{t('seeFeatures')}</Link>
+            <Button size="lg" variant="outline" asChild className="group relative overflow-hidden border-2 border-blue-200 dark:border-blue-700 hover:border-blue-400 dark:hover:border-blue-500 bg-white/80 dark:bg-gray-800/80 hover:bg-blue-50 dark:hover:bg-blue-950/30 backdrop-blur-sm transition-all duration-500 px-10 py-6 text-lg font-semibold rounded-2xl">
+              <Link href="#features" className="relative z-10 text-blue-700 dark:text-blue-300">
+                <span className="flex items-center gap-2">
+                  {t('seeFeatures')}
+                  <svg className="w-5 h-5 group-hover:translate-y-[-2px] transition-transform" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </span>
+              </Link>
             </Button>
           </div>
           
-          <div className="flex items-center gap-8 pt-8">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-gray-900 dark:text-white">500+</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('schools')}</div>
+          <div className="grid grid-cols-3 gap-6 pt-8">
+            <div className="group relative overflow-hidden bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg hover:shadow-xl transition-all duration-300 p-6 text-center">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-indigo-600/5"></div>
+              <div className="relative">
+                <div className="text-3xl font-black text-blue-600 dark:text-blue-400 mb-2">500+</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 uppercase tracking-wider font-medium">{t('schools')}</div>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-gray-900 dark:text-white">250K+</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('users')}</div>
+            <div className="group relative overflow-hidden bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg hover:shadow-xl transition-all duration-300 p-6 text-center">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-green-600/5"></div>
+              <div className="relative">
+                <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 mb-2">250K+</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 uppercase tracking-wider font-medium">{t('users')}</div>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-gray-900 dark:text-white">99.9%</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('uptime')}</div>
+            <div className="group relative overflow-hidden bg-white/70 dark:bg-gray-800/70 backdrop-blur-md rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg hover:shadow-xl transition-all duration-300 p-6 text-center">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-pink-600/5"></div>
+              <div className="relative">
+                <div className="text-3xl font-black text-purple-600 dark:text-purple-400 mb-2">99.9%</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 uppercase tracking-wider font-medium">{t('uptime')}</div>
+              </div>
             </div>
           </div>
         </div>
@@ -208,16 +246,18 @@ export function HeroSection() {
         <div className="relative">
           {/* Main dashboard mockup */}
           <div className="relative w-full max-w-lg mx-auto">
-            <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-3xl border border-gray-200/50 dark:border-gray-700/50 shadow-2xl overflow-hidden transition-all duration-1000">
+            <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-2xl rounded-3xl border border-gray-100 dark:border-gray-700 shadow-2xl hover:shadow-3xl overflow-hidden transition-all duration-1000 hover:scale-105">
+            
               {/* Header */}
-              <div className={`bg-gradient-to-r ${currentDash.color} p-6 text-white transition-all duration-1000`}>
-                <div className="flex items-center justify-between">
+              <div className={`bg-gradient-to-r ${currentDash.color} p-8 text-white transition-all duration-1000 relative overflow-hidden`}>
+                <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent"></div>
+                <div className="flex items-center justify-between relative z-10">
                   <div>
-                    <h3 className="text-lg font-bold">{currentDash.title}</h3>
-                    <p className="text-white/80 text-sm">{currentDash.subtitle}</p>
+                    <h3 className="text-xl font-bold mb-1">{currentDash.title}</h3>
+                    <p className="text-white/90 text-sm font-medium">{currentDash.subtitle}</p>
                   </div>
-                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                    <span className="text-2xl">{currentDash.icon}</span>
+                  <div className="w-16 h-16 bg-white/25 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
+                    <span className="text-3xl">{currentDash.icon}</span>
                   </div>
                 </div>
               </div>
@@ -347,27 +387,34 @@ export function HeroSection() {
             </div>
             
             {/* Dashboard Navigation Dots */}
-            <div className="flex justify-center gap-2 mt-6">
+            <div className="flex justify-center gap-3 mt-8">
               {dashboardExamples.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => setCurrentExample(index)}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                  className={`relative w-4 h-4 rounded-full transition-all duration-500 group ${
                     index === currentExample 
-                      ? 'bg-gradient-to-r from-blue-500 to-purple-500 scale-125' 
-                      : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-500 scale-125 shadow-lg' 
+                      : 'bg-gray-300 dark:bg-gray-600 hover:bg-blue-400 dark:hover:bg-blue-500 hover:scale-110'
                   }`}
                   aria-label={`Switch to ${dashboardExamples[index].title}`}
-                />
+                >
+                  {index === currentExample && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-ping opacity-75"></div>
+                  )}
+                </button>
               ))}
             </div>
             
-            {/* Floating elements */}
-            <div className="absolute -top-4 -right-4 w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-xl animate-bounce">
-              <span className="text-white text-xl">⚙️</span>
+            {/* Enhanced Floating elements */}
+            <div className="absolute -top-6 -right-6 w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-3xl flex items-center justify-center shadow-2xl animate-bounce hover:scale-110 transition-transform cursor-pointer">
+              <span className="text-white text-2xl">⚙️</span>
             </div>
-            <div className="absolute -bottom-4 -left-4 w-12 h-12 bg-gradient-to-br from-pink-400 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
-              <span className="text-white text-sm">🚀</span>
+            <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-gradient-to-br from-pink-400 to-purple-500 rounded-2xl flex items-center justify-center shadow-xl hover:scale-110 transition-transform cursor-pointer">
+              <span className="text-white text-lg">🚀</span>
+            </div>
+            <div className="absolute top-1/2 -right-4 w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg animate-pulse hover:scale-110 transition-transform cursor-pointer">
+              <span className="text-white text-lg">⚡</span>
             </div>
           </div>
         </div>

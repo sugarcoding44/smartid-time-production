@@ -1,0 +1,60 @@
+/* Sidebar performance optimizations */
+
+/* Hardware acceleration for smooth transitions */
+.sidebar-nav-link {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000;
+  will-change: transform, background-color;
+}
+
+/* Optimize hover states */
+.sidebar-nav-link:hover {
+  transform: translateZ(0) scale(1.001);
+}
+
+/* Prevent layout shifts during navigation */
+.sidebar-nav-container {
+  contain: layout style paint;
+}
+
+/* Optimize scrolling */
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 3px;
+  border: none;
+}
+
+/* Reduce repaints for icons */
+.sidebar-icon {
+  transform: translateZ(0);
+  will-change: color;
+}
+
+/* Optimize theme transitions */
+.theme-transition {
+  transition: background-color 75ms ease-out, color 75ms ease-out;
+}
+
+/* Prevent text selection on navigation items */
+.sidebar-nav-link {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}

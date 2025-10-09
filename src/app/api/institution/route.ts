@@ -67,11 +67,11 @@ export async function PATCH(request: NextRequest) {
     // Get user's institution
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('institution_id, primary_role, smartid_hub_role')
+      .select('institution_id, primary_role, smartid_time_role')
       .eq('id', user.id)
       .single()
 
-    if (userError || !userData?.institution_id) {
+    if (userError || !(userData as any)?.institution_id) {
       return NextResponse.json(
         { error: 'Institution not found' },
         { status: 404 }
@@ -79,7 +79,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Check if user has permission to update institution
-    const userRole = userData.smartid_hub_role || userData.primary_role
+    const userRole = (userData as any).smartid_time_role || (userData as any).primary_role
     if (!['superadmin', 'admin'].includes(userRole)) {
       return NextResponse.json(
         { error: 'Insufficient permissions' },
@@ -115,7 +115,7 @@ export async function PATCH(request: NextRequest) {
         website,
         updated_at: new Date().toISOString()
       })
-      .eq('id', userData.institution_id)
+      .eq('id', (userData as any).institution_id)
       .select()
       .single()
 

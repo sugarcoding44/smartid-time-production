@@ -639,35 +639,15 @@ export default function HolidaysPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="bg-white dark:bg-gradient-to-br dark:from-violet-900 dark:to-purple-900 rounded-2xl p-6 border-0 shadow-lg dark:border dark:border-purple-800/50">
+        <div className="rounded-2xl p-6 border-0 shadow-lg header-card">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Holiday Calendar</h1>
-              <p className="text-gray-600 dark:text-purple-200/90">Manage institutional holidays and important dates</p>
+              <h1 className="text-3xl font-bold text-white mb-2">
+                Holiday Calendar
+              </h1>
+              <p className="text-white/90 opacity-90">Manage institutional holidays and important dates</p>
             </div>
-            <div className="mt-4 lg:mt-0 flex gap-3">
-              {/* View Toggle */}
-              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                <Button
-                  variant={viewMode === 'list' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                  className="px-3 py-1 text-sm"
-                >
-                  <Grid3X3 className="w-4 h-4 mr-1" />
-                  List
-                </Button>
-                <Button
-                  variant={viewMode === 'calendar' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('calendar')}
-                  className="px-3 py-1 text-sm"
-                >
-                  <CalendarDays className="w-4 h-4 mr-1" />
-                  Calendar
-                </Button>
-              </div>
-              
+            <div className="mt-4 lg:mt-0">
               <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
@@ -762,124 +742,78 @@ export default function HolidaysPage() {
           </div>
         </div>
 
-        {/* Statistics & Upcoming */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Statistics */}
-          <div className="lg:col-span-2">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
-                <CardContent className="p-6 text-center">
-                  <div className="w-12 h-12 mx-auto mb-3 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Total Holidays</div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
-                <CardContent className="p-6 text-center">
-                  <div className="w-12 h-12 mx-auto mb-3 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
-                    <Clock className="w-6 h-6 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div className="text-2xl font-bold text-green-600">{stats.upcoming}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Upcoming</div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
-                <CardContent className="p-6 text-center">
-                  <div className="w-12 h-12 mx-auto mb-3 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
-                    <Flag className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <div className="text-2xl font-bold text-purple-600">{stats.public}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Public</div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
-                <CardContent className="p-6 text-center">
-                  <div className="w-12 h-12 mx-auto mb-3 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center">
-                    <School className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-                  </div>
-                  <div className="text-2xl font-bold text-orange-600">{stats.school}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">School</div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Upcoming Holidays */}
-          <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <CalendarDays className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                Upcoming Holidays
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {upcomingHolidays.length === 0 ? (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-4">
-                    No upcoming holidays
-                  </p>
-                ) : (
-                  upcomingHolidays.map((holiday) => (
-                    <div key={holiday.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center">
-                        <Calendar className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium text-gray-900 dark:text-white text-sm">
-                          {holiday.name}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {formatDateRange(holiday.start_date, holiday.end_date)}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 mx-auto mb-4 bg-green-600 rounded-full flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-white" />
               </div>
+              <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">{stats.total}</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">Total Holidays</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 mx-auto mb-4 bg-amber-600 rounded-full flex items-center justify-center">
+                <Clock className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-3xl font-bold text-amber-600 dark:text-amber-400 mb-1">{stats.upcoming}</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">Upcoming</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 mx-auto mb-4 bg-red-600 rounded-full flex items-center justify-center">
+                <Flag className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-3xl font-bold text-red-600 dark:text-red-400 mb-1">{stats.public}</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">Public Holidays</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 mx-auto mb-4 bg-indigo-600 rounded-full flex items-center justify-center">
+                <School className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-1">{stats.school}</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">School Holidays</div>
             </CardContent>
           </Card>
         </div>
 
         {/* Filters */}
-        <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
-          <CardContent className="p-6">
-            <div className="flex flex-col lg:flex-row gap-4">
+        <Card className="border border-gray-100 dark:border-slate-700">
+          <CardContent className="p-4">
+            <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
-                    placeholder="Search holidays..."
+                    placeholder="Search holidays by name or description..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
                   />
                 </div>
               </div>
-              
-              <div className="flex gap-4">
+              <div className="w-full md:w-48">
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="w-40">
-                    <ChevronDown className="w-4 h-4 mr-2" />
+                  <SelectTrigger>
                     <SelectValue placeholder="Filter by type" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Types</SelectItem>
-                    {holidayTypes.map(type => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="public"><div className="flex items-center gap-2"><Flag className="h-4 w-4 text-blue-600" /> Public</div></SelectItem>
+                    <SelectItem value="school"><div className="flex items-center gap-2"><School className="h-4 w-4 text-orange-600" /> School</div></SelectItem>
+                    <SelectItem value="religious"><div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-purple-600" /> Religious</div></SelectItem>
+                    <SelectItem value="cultural"><div className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-green-600" /> Cultural</div></SelectItem>
                   </SelectContent>
                 </Select>
-                
+              </div>
+              <div className="w-full md:w-32">
                 <Select value={yearFilter} onValueChange={setYearFilter}>
-                  <SelectTrigger className="w-32">
-                    <Calendar className="w-4 h-4 mr-2" />
+                  <SelectTrigger>
                     <SelectValue placeholder="Year" />
                   </SelectTrigger>
                   <SelectContent>
@@ -897,89 +831,91 @@ export default function HolidaysPage() {
         </Card>
 
         {/* Holidays Display */}
-        <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-              Holiday Calendar
-              <Badge variant="secondary" className="ml-auto">
-                {filteredHolidays.length} holidays
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {filteredHolidays.length === 0 ? (
-                <div className="text-center py-12">
-                  <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500 dark:text-gray-400">No holidays found</p>
-                </div>
-              ) : viewMode === 'list' ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {filteredHolidays.map((holiday) => (
-                    <div
-                      key={holiday.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                    >
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
-                          <CalendarDays className="w-6 h-6" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="font-medium text-gray-900 dark:text-white">
-                              {holiday.name}
-                            </div>
-                            {holiday.recurring && (
-                              <Badge variant="outline" className="text-xs">
-                                Recurring
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                            {formatDateRange(holiday.start_date, holiday.end_date)} • 
-                            {getDaysDuration(holiday.start_date, holiday.end_date)} day{getDaysDuration(holiday.start_date, holiday.end_date) !== 1 ? 's' : ''}
-                          </div>
-                          {holiday.description && (
-                            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                              {holiday.description}
-                            </div>
-                          )}
-                        </div>
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+          </div>
+        ) : filteredHolidays.length === 0 ? (
+          <Card className="border border-gray-100 dark:border-slate-700">
+            <CardContent className="text-center py-12">
+              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No holidays found</h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">Create your first holiday to get started</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredHolidays.map((holiday) => (
+              <Card key={holiday.id} className="border border-gray-200 dark:border-slate-700 hover:shadow-lg transition-shadow">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ${
+                        holiday.type === 'public' ? 'bg-blue-600' :
+                        holiday.type === 'school' ? 'bg-orange-600' :
+                        holiday.type === 'religious' ? 'bg-purple-600' :
+                        'bg-green-600'
+                      }`}>
+                        {holiday.type === 'public' ? <Flag className="w-6 h-6" /> :
+                         holiday.type === 'school' ? <School className="w-6 h-6" /> :
+                         holiday.type === 'religious' ? <Calendar className="w-6 h-6" /> :
+                         <CalendarDays className="w-6 h-6" />}
                       </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <Badge className={getTypeColor(holiday.type)}>
-                          {holidayTypes.find(t => t.value === holiday.type)?.label}
-                        </Badge>
-                        
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => openEditModal(holiday)}
-                          className="p-2"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleDeleteHoliday(holiday.id)}
-                          className="p-2 text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                          {holiday.name}
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {formatDateRange(holiday.start_date, holiday.end_date)}
+                        </p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                /* Calendar View */
-                <HolidayCalendarView holidays={holidays} onEditHoliday={openEditModal} onDeleteHoliday={handleDeleteHoliday} />
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                    <div className="flex items-center gap-2">
+                      <Badge className={getTypeColor(holiday.type)}>
+                        {holidayTypes.find(t => t.value === holiday.type)?.label || holiday.type}
+                      </Badge>
+                      {holiday.recurring && (
+                        <Badge variant="outline" className="text-xs">
+                          Recurring
+                        </Badge>
+                      )}
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => openEditModal(holiday)}
+                        className="p-2 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleDeleteHoliday(holiday.id)}
+                        className="p-2 text-red-600 hover:text-red-700 border-gray-300 dark:border-gray-600 hover:border-red-300 dark:hover:border-red-500"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">Duration:</span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {getDaysDuration(holiday.start_date, holiday.end_date)} day{getDaysDuration(holiday.start_date, holiday.end_date) !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    {holiday.description && (
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{holiday.description}</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Edit Modal */}

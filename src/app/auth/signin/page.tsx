@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { useAuth } from '@/contexts/auth-context'
 
 export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -20,6 +21,7 @@ export default function SignInPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
+  const { user, loading } = useAuth()
 
   useEffect(() => {
     const error = searchParams.get('error')
@@ -27,6 +29,14 @@ export default function SignInPage() {
       toast.error('Email confirmation failed. Please try again or request a new confirmation email.')
     }
   }, [searchParams])
+
+  // If already authenticated, redirect to dashboard
+  useEffect(() => {
+    if (user) {
+      console.log('✅ User detected in context, redirecting to dashboard')
+      router.replace('/dashboard')
+    }
+  }, [user, router])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -36,39 +46,44 @@ export default function SignInPage() {
     }))
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isLoading) return
+    
     setIsLoading(true)
+    console.log('🔑 Attempting sign-in for:', formData.email)
 
     try {
-      console.log('🔑 Attempting sign-in for:', formData.email)
-      
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // Attempt sign in directly (avoid pre-emptive signOut which can hang)
+      const signInResult = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password
       })
 
-      console.log('🔑 Sign-in result:', {
-        hasUser: !!data.user,
-        userEmail: data.user?.email,
-        userConfirmed: data.user?.email_confirmed_at,
-        error: error?.message,
-        errorCode: error?.message
+      console.log('💯 Sign-in response:', {
+        success: !!signInResult?.data?.user,
+        error: signInResult?.error?.message
       })
 
-      if (error) {
-        console.error('❌ Sign-in error:', error)
-        toast.error(error.message)
+      if (signInResult.error) {
+        console.error('❌ Sign-in returned error:', signInResult.error)
+        toast.error(signInResult.error.message)
         return
       }
 
-      if (data.user) {
-        toast.success('Sign in successful!')
-        router.push('/dashboard')
+      if (!signInResult.data?.user) {
+        console.error('❌ Sign-in returned no user')
+        toast.error('Unable to sign in')
+        return
       }
-    } catch (error) {
-      toast.error('An unexpected error occurred')
-      console.error('Signin error:', error)
+
+      // Success! Redirect immediately; auth context will continue fetching profile
+      toast.success('Welcome back!')
+      router.replace('/dashboard')
+    } catch (error: any) {
+      console.error('❌ Sign-in error:', error)
+      const message = error?.message || 'An unexpected error occurred. Please try again.'
+      toast.error(message)
     } finally {
       setIsLoading(false)
     }

@@ -4,14 +4,18 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useState, useEffect } from 'react'
-import { UserPlus, Hand, CreditCard, Zap, Calendar, Settings, Users, FileText, Clock, UserCheck } from 'lucide-react'
+import { UserPlus, Hand, CreditCard, Zap, Calendar, Settings, Users, FileText, Clock, UserCheck, Activity, BarChart3, Bell, Crown, CalendarClock } from 'lucide-react'
 import Link from 'next/link'
 import { QuickAddUserModal } from '@/components/features/quick-add-user-modal'
 import { QuickUserModal } from '@/components/features/quick-user-modal'
 import { PalmEnrollmentModal } from '@/components/features/palm-enrollment-modal'
 import { CardIssuanceModal } from '@/components/features/card-issuance-modal'
+import { CompactEnrollmentChart } from '@/components/charts/compact-enrollment-chart'
+import { AttendanceChart } from '@/components/charts/attendance-chart'
 import { useAuth } from '@/contexts/auth-context'
 import { toast } from 'sonner'
+import { Skeleton } from '@/components/ui/skeleton'
+import { HeaderSkeleton, StatCardSkeleton, ChartSkeleton } from '@/components/ui/loading-skeletons'
 
 export default function DashboardPage() {
   const { user, profile, loading } = useAuth()
@@ -59,10 +63,10 @@ export default function DashboardPage() {
   
   // Transform data for display
   const stats = [
-    { title: 'Total Users', value: dashboardData.users.total.toLocaleString(), icon: '👥', gradient: 'from-blue-500 to-blue-600' },
-    { title: 'Teachers', value: dashboardData.users.teacher.toLocaleString(), icon: '👨‍🏫', gradient: 'from-green-500 to-green-600' },
-    { title: 'Staff Members', value: dashboardData.users.staff.toLocaleString(), icon: '👩‍💼', gradient: 'from-purple-500 to-purple-600' },
-    { title: 'Students', value: dashboardData.users.student.toLocaleString(), icon: '🎓', gradient: 'from-orange-500 to-orange-600' },
+    { title: 'Total Users', value: dashboardData.users.total.toLocaleString(), icon: Users, color: 'bg-blue-600', textColor: 'text-blue-600 dark:text-blue-400' },
+    { title: 'Teachers', value: dashboardData.users.teacher.toLocaleString(), icon: UserCheck, color: 'bg-green-600', textColor: 'text-green-600 dark:text-green-400' },
+    { title: 'Staff Members', value: dashboardData.users.staff.toLocaleString(), icon: FileText, color: 'bg-purple-600', textColor: 'text-purple-600 dark:text-purple-400' },
+    { title: 'Students', value: dashboardData.users.student.toLocaleString(), icon: UserPlus, color: 'bg-orange-600', textColor: 'text-orange-600 dark:text-orange-400' },
   ]
   
   const progressData = [
@@ -125,244 +129,554 @@ export default function DashboardPage() {
     fetchDashboardData() // Refresh dashboard data
   }
   
-  // Show loading state if auth is still loading
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-        </div>
-      </DashboardLayout>
-    )
-  }
+  // Derive a name from whatever we have available; don't block on loading
+  const userName = profile?.full_name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'
   
   return (
     <DashboardLayout>
       <div className="space-y-8">
-              {/* Welcome Header */}
-              <div className="bg-white dark:bg-gradient-to-br dark:from-violet-900 dark:to-purple-900 rounded-2xl p-6 border-0 shadow-lg dark:border dark:border-purple-800/50">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-                  <div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Welcome back, {loading ? '...' : (profile?.full_name || user?.email?.split('@')[0] || 'Admin')} 👋</h1>
-                    <p className="text-gray-600 dark:text-purple-200/90">Institution Admin • {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                  </div>
-                  <div className="flex gap-8 mt-4 lg:mt-0">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{dataLoading ? '...' : dashboardData.users.total}</div>
-                      <div className="text-sm text-gray-500 dark:text-purple-200/70">Total Users</div>
+        {/* Hero Section with Alipay+ Style */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-indigo-950 rounded-3xl p-8 md:p-12 border border-gray-100 dark:border-gray-700 shadow-xl">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
+            {/* Left Content */}
+            <div className="space-y-6">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 rounded-full text-blue-600 text-sm font-medium">
+                ✨ Dashboard Overview
+              </div>
+              
+              <div className="space-y-4">
+                <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white leading-tight">
+                  Welcome back,
+                  <br />
+                  <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                    {userName}
+                  </span>
+                </h1>
+                
+                <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
+                  Your institution is running smoothly. Here's what's happening today.
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </p>
+              </div>
+
+              {/* Quick Stats */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl p-4 border border-gray-200/50 dark:border-gray-700/50">
+                  {dataLoading ? (
+                    <Skeleton className="h-8 w-16" />
+                  ) : (
+                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                      {dashboardData.users?.total || 0}
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{dataLoading ? '...' : `${dashboardData.enrollment.rate}%`}</div>
-                      <div className="text-sm text-gray-500 dark:text-purple-200/70">Enrollment Rate</div>
+                  )}
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Total Users</div>
+                </div>
+                <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl p-4 border border-gray-200/50 dark:border-gray-700/50">
+                  {dataLoading ? (
+                    <Skeleton className="h-8 w-16" />
+                  ) : (
+                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                      {dashboardData.enrollment?.rate || 0}%
+                    </div>
+                  )}
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Enrolled</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Visual - Animated Dashboard Card */}
+            <div className="relative lg:ml-8">
+              <div className="relative">
+                {/* Main Dashboard Card */}
+                <div className="relative bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-2xl border border-gray-100 dark:border-gray-700 transform hover:scale-105 transition-all duration-300">
+                  <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4 rounded-2xl mb-4">
+                    <div className="text-lg font-bold mb-1">smartID TIME</div>
+                    <div className="text-sm opacity-90">Live Dashboard</div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between animate-pulse">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-sm">
+                          ✓
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900 dark:text-white text-sm">Attendance Active</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Real-time tracking</div>
+                        </div>
+                      </div>
+                      <div className="text-green-600 font-semibold text-sm">Live</div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full flex items-center justify-center text-sm">
+                          📊
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900 dark:text-white text-sm">Analytics Ready</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Updated 2min ago</div>
+                        </div>
+                      </div>
+                      <div className="text-blue-600 font-semibold text-sm">View</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Floating Elements */}
+                <div className="absolute -top-2 -right-2 w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center text-white text-lg font-bold shadow-xl transform -rotate-12 hover:rotate-0 transition-transform duration-300">
+                  🎯
+                </div>
+                
+                <div className="absolute -bottom-4 -left-4 w-12 h-12 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center text-white shadow-lg transform rotate-12 hover:rotate-6 transition-transform duration-300">
+                  ⚡
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Background Decorations */}
+          <div className="absolute top-10 right-16 w-24 h-24 bg-gradient-to-r from-blue-200 to-indigo-200 rounded-full opacity-20 blur-xl"></div>
+          <div className="absolute bottom-12 left-12 w-16 h-16 bg-gradient-to-r from-purple-200 to-pink-200 rounded-full opacity-20 blur-xl"></div>
+        </div>
+
+              {/* Stats Grid - Alipay+ Style */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
+                {/* Total Users Card */}
+                <div className="group relative overflow-hidden bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg border border-gray-100 dark:border-gray-700 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-blue-600/5"></div>
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="p-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl shadow-lg">
+                        <div className="text-2xl text-white">👥</div>
+                      </div>
+                      <div className="text-right">
+                        {dataLoading ? (
+                          <Skeleton className="h-9 w-20 mb-1" />
+                        ) : (
+                          <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                            {dashboardData.users?.total || 0}
+                          </div>
+                        )}
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Total Users</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-sm font-medium">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                        +{dashboardData.users?.new || 0} this month
+                      </div>
+                      <div className="text-2xl opacity-20 group-hover:opacity-40 transition-opacity">📈</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Active Today Card */}
+                <div className="group relative overflow-hidden bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg border border-gray-100 dark:border-gray-700 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-green-600/5"></div>
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="p-4 bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl shadow-lg">
+                        <div className="text-2xl text-white">✅</div>
+                      </div>
+                      <div className="text-right">
+                        {dataLoading ? (
+                          <Skeleton className="h-9 w-20 mb-1" />
+                        ) : (
+                          <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                            {dashboardData.users?.active || 0}
+                          </div>
+                        )}
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Active Today</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-full text-sm font-medium">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        {dashboardData.users?.activePercentage || 0}% of total
+                      </div>
+                      <div className="text-2xl opacity-20 group-hover:opacity-40 transition-opacity">⚡</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Enrollment Rate Card */}
+                <div className="group relative overflow-hidden bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg border border-gray-100 dark:border-gray-700 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-transparent to-indigo-600/5"></div>
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="p-4 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-2xl shadow-lg">
+                        <div className="text-2xl text-white">📋</div>
+                      </div>
+                      <div className="text-right">
+                        {dataLoading ? (
+                          <Skeleton className="h-9 w-20 mb-1" />
+                        ) : (
+                          <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                            {dashboardData.enrollment?.rate || 0}%
+                          </div>
+                        )}
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Enrollment</div>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                        <div 
+                          className="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full h-3 transition-all duration-1000 ease-out" 
+                          style={{ width: `${dashboardData.enrollment?.rate || 0}%` }}
+                        ></div>
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                        Target: 85% completion
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Leave Requests Card */}
+                <div className="group relative overflow-hidden bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg border border-gray-100 dark:border-gray-700 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-transparent to-red-600/5"></div>
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="p-4 bg-gradient-to-r from-orange-500 to-red-600 rounded-2xl shadow-lg">
+                        <div className="text-2xl text-white">📝</div>
+                      </div>
+                      <div className="text-right">
+                        {dataLoading ? (
+                          <Skeleton className="h-9 w-20 mb-1" />
+                        ) : (
+                          <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                            {dashboardData.leaves?.pending || 0}
+                          </div>
+                        )}
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Leave Requests</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-full text-sm font-medium">
+                        <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                        {dashboardData.leaves?.approved || 0} approved
+                      </div>
+                      <div className="text-2xl opacity-20 group-hover:opacity-40 transition-opacity">📊</div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Stats Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {stats.map((stat, index) => (
-                  <Card key={index} className="relative overflow-hidden bg-white border-0 shadow-lg dark:bg-slate-800 dark:border-slate-700 hover:shadow-xl dark:hover:bg-slate-700 transition-all duration-300">
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1">{stat.title}</p>
-                          <p className="text-2xl font-bold text-gray-900 dark:text-slate-50">{dataLoading ? '...' : stat.value}</p>
-                          {!dataLoading && parseInt(stat.value) > 0 && (
-                            <div className="flex items-center gap-1 mt-1">
-                              <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
-                              <span className="text-xs text-gray-500 dark:text-slate-400">Active users</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className={`w-12 h-12 bg-gradient-to-br ${stat.gradient} rounded-2xl flex items-center justify-center text-white text-xl shadow-lg`}>
-                          {stat.icon}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+        {/* Quick Actions - Alipay+ Style */}
+        <div className="relative bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+          <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-500/10 to-indigo-600/5 rounded-full transform translate-x-16 -translate-y-16"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-8">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl">
+                    <Zap className="w-5 h-5 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Quick Actions</h2>
+                </div>
+                <p className="text-gray-600 dark:text-gray-400">Access frequently used features instantly</p>
               </div>
-
-        {/* Quick Actions */}
-        <Card className="bg-white border-0 shadow-lg dark:bg-slate-800 dark:border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold text-gray-900 dark:text-slate-50 flex items-center gap-2">
-              <Zap className="w-6 h-6 text-indigo-600" />
-              Quick Actions
-            </CardTitle>
-            <p className="text-sm text-gray-600 dark:text-slate-400">One-click actions for common tasks</p>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div className="hidden md:block text-4xl opacity-20">⚡</div>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
               {/* Add New User */}
               <div className="group cursor-pointer" onClick={() => setShowAddUserModal(true)}>
-                <div className="flex flex-col items-center p-4 rounded-xl border border-gray-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md transition-all duration-200">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white mb-3 group-hover:scale-110 transition-transform">
-                    <UserPlus className="w-6 h-6" />
+                <div className="relative bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-2xl p-6 border border-blue-200/50 dark:border-blue-700/50 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 to-blue-600/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="relative flex flex-col items-center space-y-3">
+                    <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                      <UserPlus className="w-7 h-7 text-white" />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white text-center leading-tight">Add New User</span>
                   </div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-slate-100 text-center">Add New User</span>
                 </div>
               </div>
 
               {/* Enroll Palm Biometric */}
               <div className="group cursor-pointer" onClick={() => setShowPalmUserModal(true)}>
-                <div className="flex flex-col items-center p-4 rounded-xl border border-gray-200 dark:border-slate-700 hover:border-green-300 dark:hover:border-green-600 hover:shadow-md transition-all duration-200">
-                  <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-white mb-3 group-hover:scale-110 transition-transform">
-                    <Hand className="w-6 h-6" />
+                <div className="relative bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-900/20 dark:to-green-800/20 rounded-2xl p-6 border border-green-200/50 dark:border-green-700/50 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                  <div className="absolute inset-0 bg-gradient-to-r from-green-500/0 to-emerald-600/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="relative flex flex-col items-center space-y-3">
+                    <div className="w-14 h-14 bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                      <Hand className="w-7 h-7 text-white" />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white text-center leading-tight">Enroll Palm</span>
                   </div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-slate-100 text-center">Enroll Palm</span>
                 </div>
               </div>
 
               {/* Issue Smart Card */}
               <div className="group cursor-pointer" onClick={() => setShowCardUserModal(true)}>
-                <div className="flex flex-col items-center p-4 rounded-xl border border-gray-200 dark:border-slate-700 hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-md transition-all duration-200">
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center text-white mb-3 group-hover:scale-110 transition-transform">
-                    <CreditCard className="w-6 h-6" />
+                <div className="relative bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-2xl p-6 border border-purple-200/50 dark:border-purple-700/50 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500/0 to-purple-600/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="relative flex flex-col items-center space-y-3">
+                    <div className="w-14 h-14 bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                      <CreditCard className="w-7 h-7 text-white" />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white text-center leading-tight">Issue Card</span>
                   </div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-slate-100 text-center">Issue Smart Card</span>
                 </div>
               </div>
 
-              {/* User Management (Page Link) */}
-              <Link href="/simple-users" className="group">
-                <div className="flex flex-col items-center p-4 rounded-xl border border-gray-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md transition-all duration-200 cursor-pointer">
-                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-full flex items-center justify-center text-white mb-3 group-hover:scale-110 transition-transform">
-                    <Users className="w-6 h-6" />
+              {/* User Management */}
+              <Link href="/simple-users-v2" className="group">
+                <div className="relative bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-800/20 rounded-2xl p-6 border border-indigo-200/50 dark:border-indigo-700/50 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 to-indigo-600/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="relative flex flex-col items-center space-y-3">
+                    <div className="w-14 h-14 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                      <Users className="w-7 h-7 text-white" />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white text-center leading-tight">User Mgmt</span>
                   </div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-slate-100 text-center">User Management</span>
                 </div>
               </Link>
 
               {/* Attendance */}
               <Link href="/attendance" className="group">
-                <div className="flex flex-col items-center p-4 rounded-xl border border-gray-200 dark:border-slate-700 hover:border-orange-300 dark:hover:border-orange-600 hover:shadow-md transition-all duration-200 cursor-pointer">
-                  <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center text-white mb-3 group-hover:scale-110 transition-transform">
-                    <Clock className="w-6 h-6" />
+                <div className="relative bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-2xl p-6 border border-orange-200/50 dark:border-orange-700/50 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                  <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 to-orange-600/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="relative flex flex-col items-center space-y-3">
+                    <div className="w-14 h-14 bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                      <Clock className="w-7 h-7 text-white" />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white text-center leading-tight">Attendance</span>
                   </div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-slate-100 text-center">Attendance</span>
                 </div>
               </Link>
 
               {/* System Settings */}
               <Link href="/profile" className="group">
-                <div className="flex flex-col items-center p-4 rounded-xl border border-gray-200 dark:border-slate-700 hover:border-gray-400 dark:hover:border-gray-500 hover:shadow-md transition-all duration-200 cursor-pointer">
-                  <div className="w-12 h-12 bg-gradient-to-br from-gray-500 to-gray-600 rounded-full flex items-center justify-center text-white mb-3 group-hover:scale-110 transition-transform">
-                    <Settings className="w-6 h-6" />
+                <div className="relative bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700/20 dark:to-gray-600/20 rounded-2xl p-6 border border-gray-200/50 dark:border-gray-600/50 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                  <div className="absolute inset-0 bg-gradient-to-r from-gray-500/0 to-gray-600/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="relative flex flex-col items-center space-y-3">
+                    <div className="w-14 h-14 bg-gradient-to-r from-gray-500 to-gray-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                      <Settings className="w-7 h-7 text-white" />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white text-center leading-tight">Settings</span>
                   </div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-slate-100 text-center">Settings</span>
                 </div>
               </Link>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Main Dashboard Grid */}
+        {/* Main Dashboard Grid - Alipay+ Style */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Progress Section */}
+          {/* Enrollment Overview Section */}
           <div className="lg:col-span-2">
-            <Card className="bg-white border-0 shadow-lg dark:bg-slate-800 dark:border-slate-700">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xl font-semibold text-gray-900 dark:text-slate-50">Enrollment Overview</CardTitle>
-                  <div className="text-sm text-gray-500 dark:text-slate-400 bg-gray-100 dark:bg-slate-700 px-3 py-1 rounded-full">
-                    This Month
-                  </div>
+            {dataLoading ? (
+              <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-gray-700">
+                <div className="flex items-center justify-center py-12 space-x-4">
+                  <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-200 border-t-blue-600"></div>
+                  <span className="text-gray-600 dark:text-gray-300 text-lg">Loading enrollment data...</span>
                 </div>
-              </CardHeader>
-              <CardContent>
-                {/* Chart Placeholder */}
-                <div className="h-64 bg-gradient-to-br from-indigo-50 to-purple-50 dark:bg-slate-900 dark:border-2 dark:border-dashed dark:border-slate-700 rounded-2xl flex items-center justify-center mb-6">
-                  <div className="text-center">
-                    <div className="text-4xl mb-2">📊</div>
-                    <p className="text-gray-600 dark:text-slate-400">Enrollment Progress Chart</p>
-                    <p className="text-sm text-gray-500 dark:text-slate-500">Last 7 days comparison</p>
-                  </div>
-                </div>
-                
-                {/* Progress Bars */}
-                <div className="space-y-4">
-                  {progressData.map((item, index) => (
-                    <div key={index} className="bg-gray-50 dark:bg-slate-900 dark:border-l-4 dark:border-indigo-500 rounded-xl p-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium text-gray-700 dark:text-slate-300 text-sm">{item.label}</span>
-                        <span className="font-semibold text-gray-900 dark:text-slate-100 text-sm">
-                          {item.value}% ({item.completed}/{item.total})
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                        <div 
-                          className="bg-gradient-to-r from-indigo-500 to-indigo-600 dark:from-indigo-400 dark:to-indigo-500 h-2 rounded-full transition-all duration-500"
-                          style={{ width: `${item.value}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+                <CompactEnrollmentChart 
+                  data={{
+                    users: dashboardData.users,
+                    enrollment: dashboardData.enrollment
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           {/* Right Column */}
-          <div className="space-y-6">
-            {/* Recent Activity */}
-            <Card className="bg-white border-0 shadow-lg dark:bg-slate-800 dark:border-slate-700">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold text-gray-900 dark:text-slate-50 flex items-center gap-2">
-                  <span>🔔 Recent Activity</span>
-                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                  <div className="space-y-4 max-h-96 overflow-y-auto">
-                    {dataLoading ? (
-                      <div className="text-center py-8 text-gray-500 dark:text-slate-400">
-                        Loading activities...
+          <div className="space-y-8">
+            {/* Recent Activity - Alipay+ Style */}
+            <div className="relative bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+              <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-green-500/10 to-emerald-600/5 rounded-full transform -translate-x-16 -translate-y-16"></div>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl">
+                        <div className="text-lg">🔔</div>
                       </div>
-                    ) : dashboardData.recentActivities.length > 0 ? (
-                      dashboardData.recentActivities.map((activity: any, index: number) => (
-                        <div key={index} className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                          <div className={`w-10 h-10 ${activity.color} rounded-full flex items-center justify-center text-white text-sm flex-shrink-0 shadow-md`}>
-                            {activity.icon}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate">
-                              {activity.title}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-slate-400">{activity.time}</p>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8 text-gray-500 dark:text-slate-400">
-                        No recent activities
-                      </div>
-                    )}
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">Recent Activity</h3>
+                      <div className="w-3 h-3 bg-emerald-400 rounded-full animate-pulse shadow-lg"></div>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 ml-11">Latest system updates</p>
                   </div>
-              </CardContent>
-            </Card>
-
-            {/* SmartID NFC Card Info */}
-            <Card className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-0 shadow-xl">
-              <CardContent className="p-6">
-                <div className="text-center">
-                  <div className="text-4xl mb-3">💳</div>
-                  <h3 className="font-semibold text-lg mb-2">SmartID NFC Card</h3>
-                  <p className="text-indigo-100 text-sm mb-3">
-                    Encrypted NFC technology with built-in eWallet for cafeteria payments.
-                  </p>
-                  <div className="bg-white/20 rounded-lg p-3 mb-4">
-                    <div className="text-2xl font-bold">RM10</div>
-                    <div className="text-sm opacity-90">per card</div>
-                    <div className="text-xs mt-1">Min. order: 100 cards</div>
-                  </div>
-                  <button className="bg-white/90 text-indigo-600 px-4 py-2 rounded-xl text-sm font-medium hover:bg-white/80 transition-colors">
-                    Order Cards
-                  </button>
                 </div>
-              </CardContent>
-            </Card>
+
+                {/* Activities List */}
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {dataLoading ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-4 border-green-200 border-t-green-600 mx-auto mb-4"></div>
+                      <span className="text-gray-500 dark:text-gray-400">Loading activities...</span>
+                    </div>
+                  ) : dashboardData.recentActivities.length > 0 ? (
+                    dashboardData.recentActivities.map((activity: any, index: number) => (
+                      <div key={index} className="group flex items-center gap-4 p-4 rounded-2xl bg-gray-50/50 dark:bg-gray-700/30 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 dark:hover:from-green-900/20 dark:hover:to-emerald-800/20 transition-all duration-300 cursor-pointer">
+                        <div className={`w-12 h-12 ${activity.color} rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform flex-shrink-0`}>
+                          <span className="text-sm font-bold">{activity.icon}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 dark:text-white mb-1 truncate">
+                            {activity.title}
+                          </p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{activity.time}</p>
+                        </div>
+                        <div className="text-gray-300 dark:text-gray-600 group-hover:text-green-400 transition-colors">
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-12">
+                      <div className="text-4xl mb-4">📊</div>
+                      <p className="text-gray-500 dark:text-gray-400 text-lg">No recent activities</p>
+                      <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">Activities will appear here as they happen</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Attendance Analytics Section - Alipay+ Style */}
+        <div className="relative bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-blue-500/10 to-indigo-600/5 rounded-full transform translate-x-24 -translate-y-24"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between mb-8">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl shadow-lg">
+                    <BarChart3 className="w-6 h-6 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Attendance Analytics</h2>
+                </div>
+                <p className="text-gray-600 dark:text-gray-400 ml-12">Real-time insights and trends</p>
+              </div>
+              <div className="flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-sm font-medium">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                Live Data
+              </div>
+            </div>
+            {dataLoading ? (
+              <div className="text-center py-16">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
+                <span className="text-gray-600 dark:text-gray-300 text-lg">Loading attendance data...</span>
+              </div>
+            ) : (
+              <AttendanceChart 
+                data={{
+                  todayStats: {
+                    present: dashboardData.attendance.today,
+                    late: Math.round(dashboardData.attendance.today * 0.2), // Demo calculation
+                    absent: dashboardData.users.total - dashboardData.attendance.today,
+                    total: dashboardData.users.total,
+                    rate: dashboardData.attendance.rate
+                  },
+                  weeklyTrend: [
+                    { day: 'Mon', present: dashboardData.attendance.today + 2, late: 2, absent: 2, rate: dashboardData.attendance.rate + 5 },
+                    { day: 'Tue', present: dashboardData.attendance.today + 1, late: 3, absent: 2, rate: dashboardData.attendance.rate + 2 },
+                    { day: 'Wed', present: dashboardData.attendance.today + 3, late: 1, absent: 2, rate: dashboardData.attendance.rate + 8 },
+                    { day: 'Thu', present: dashboardData.attendance.today, late: 4, absent: 2, rate: dashboardData.attendance.rate },
+                    { day: 'Fri', present: dashboardData.attendance.today - 2, late: 5, absent: 3, rate: dashboardData.attendance.rate - 10 },
+                    { day: 'Sat', present: dashboardData.attendance.today + 4, late: 1, absent: 1, rate: dashboardData.attendance.rate + 15 },
+                    { day: 'Sun', present: dashboardData.attendance.today, late: 3, absent: 3, rate: dashboardData.attendance.rate }
+                  ],
+                  timeDistribution: [
+                    { hour: '7:00', checkIns: 2 },
+                    { hour: '7:30', checkIns: 5 },
+                    { hour: '8:00', checkIns: Math.round(dashboardData.attendance.today * 0.5) || 8 },
+                    { hour: '8:30', checkIns: Math.round(dashboardData.attendance.today * 0.3) || 5 },
+                    { hour: '9:00', checkIns: 3 },
+                    { hour: '9:30', checkIns: 1 },
+                    { hour: '10:00', checkIns: 0 }
+                  ]
+                }}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Premium Features Showcase - Alipay+ Style */}
+        <div className="relative bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 rounded-3xl p-8 shadow-2xl overflow-hidden">
+          <div className="absolute inset-0">
+            <div className="absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full transform -translate-x-32 -translate-y-32"></div>
+            <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/5 rounded-full transform translate-x-48 translate-y-48"></div>
+          </div>
+          <div className="relative text-white">
+            <div className="mb-8">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl">
+                  <Crown className="w-8 h-8 text-yellow-300" />
+                </div>
+                <div>
+                  <h2 className="text-3xl font-bold mb-2">SmartID TIME Premium</h2>
+                  <p className="text-indigo-100 text-lg opacity-90">Experience the power of advanced attendance management</p>
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Live Dashboard */}
+              <Link href="/live-attendance" className="group">
+                <div className="relative bg-white/15 backdrop-blur-md rounded-2xl p-8 hover:bg-white/25 transition-all duration-300 border border-white/20 hover:border-white/40 hover:shadow-2xl hover:-translate-y-1">
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="relative">
+                    <div className="w-16 h-16 bg-white/25 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg">
+                      <Activity className="w-8 h-8 text-white" />
+                    </div>
+                    <h3 className="text-xl font-bold mb-3">Live Dashboard</h3>
+                    <p className="text-indigo-100 opacity-90 leading-relaxed">Real-time attendance tracking with auto-refresh and live statistics</p>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Advanced Analytics */}
+              <Link href="/analytics" className="group">
+                <div className="relative bg-white/15 backdrop-blur-md rounded-2xl p-8 hover:bg-white/25 transition-all duration-300 border border-white/20 hover:border-white/40 hover:shadow-2xl hover:-translate-y-1">
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="relative">
+                    <div className="w-16 h-16 bg-white/25 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg">
+                      <BarChart3 className="w-8 h-8 text-white" />
+                    </div>
+                    <h3 className="text-xl font-bold mb-3">Advanced Analytics</h3>
+                    <p className="text-indigo-100 opacity-90 leading-relaxed">Comprehensive reports, trends analysis, and performance insights</p>
+                  </div>
+                </div>
+              </Link>
+
+              {/* Smart Notifications */}
+              <Link href="/notifications" className="group">
+                <div className="relative bg-white/15 backdrop-blur-md rounded-2xl p-8 hover:bg-white/25 transition-all duration-300 border border-white/20 hover:border-white/40 hover:shadow-2xl hover:-translate-y-1">
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="relative">
+                    <div className="w-16 h-16 bg-white/25 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg">
+                      <Bell className="w-8 h-8 text-white" />
+                    </div>
+                    <h3 className="text-xl font-bold mb-3">Smart Notifications</h3>
+                    <p className="text-indigo-100 opacity-90 leading-relaxed">Intelligent alerts for attendance issues and system updates</p>
+                  </div>
+                </div>
+              </Link>
+            </div>
+
+            <div className="mt-10 flex justify-center">
+              <Link href="/leave-requests">
+                <div className="group inline-flex items-center gap-3 px-8 py-4 bg-white text-indigo-600 hover:bg-gray-50 rounded-2xl font-semibold text-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+                  <CalendarClock className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                  Manage Leave Requests
+                  <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

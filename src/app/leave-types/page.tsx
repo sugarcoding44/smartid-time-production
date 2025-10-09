@@ -287,38 +287,15 @@ export default function LeaveTypesPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="bg-white dark:bg-gradient-to-br dark:from-violet-900 dark:to-purple-900 rounded-2xl p-6 border-0 shadow-lg dark:border dark:border-purple-800/50">
+        <div className="rounded-2xl p-6 border-0 shadow-lg header-card">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                <ClipboardList className="w-8 h-8" />
+              <h1 className="text-3xl font-bold text-white mb-2">
                 Leave Types Configuration
               </h1>
-              <p className="text-gray-600 dark:text-purple-200/90">Manage leave policies, quotas, and rules for your institution</p>
+              <p className="text-white/90 opacity-90">Manage leave policies, quotas, and rules for your institution</p>
             </div>
-            <div className="mt-4 lg:mt-0 flex gap-3">
-              {/* View Toggle */}
-              <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                <Button
-                  variant={viewMode === 'card' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('card')}
-                  className="px-3 py-1 text-sm"
-                >
-                  <Grid3X3 className="w-4 h-4 mr-1" />
-                  Cards
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                  className="px-3 py-1 text-sm"
-                >
-                  <List className="w-4 h-4 mr-1" />
-                  List
-                </Button>
-              </div>
-              
+            <div className="mt-4 lg:mt-0">
               <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
@@ -560,151 +537,206 @@ export default function LeaveTypesPage() {
           </div>
         </div>
 
-        {/* Search */}
-        <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
-          <CardContent className="p-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search leave types..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 mx-auto mb-4 bg-indigo-600 rounded-full flex items-center justify-center">
+                <ClipboardList className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-1">{leaveTypes.length}</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">Total Leave Types</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 mx-auto mb-4 bg-green-600 rounded-full flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">{leaveTypes.filter(t => t.is_active).length}</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">Active Types</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 mx-auto mb-4 bg-purple-600 rounded-full flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-1">{leaveTypes.filter(t => t.is_paid).length}</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">Paid Leave Types</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filters */}
+        <Card className="border border-gray-100 dark:border-slate-700">
+          <CardContent className="p-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Search leave types by name or description..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* View Toggle */}
+                <div className="flex items-center bg-gray-100 dark:bg-slate-700 rounded-lg p-1">
+                  <Button
+                    variant={viewMode === 'card' ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode('card')}
+                    className={`h-8 w-8 p-0 ${viewMode === 'card' ? 'bg-white dark:bg-slate-600 shadow-sm text-gray-700 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'}`}
+                  >
+                    <Grid3X3 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'list' ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode('list')}
+                    className={`h-8 w-8 p-0 ${viewMode === 'list' ? 'bg-white dark:bg-slate-600 shadow-sm text-gray-700 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'}`}
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Leave Types Display */}
-        <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ClipboardList className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-              Leave Types
-              <Badge variant="secondary" className="ml-auto">
-                {filteredTypes.length} types
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {filteredTypes.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4">📋</div>
-                <p className="text-gray-500 dark:text-gray-400">No leave types found</p>
-                <p className="text-sm text-gray-400 mt-2">Create your first leave type to get started</p>
-              </div>
-            ) : viewMode === 'card' ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {filteredTypes.map((type) => (
-                  <div key={type.id} className="bg-white border border-gray-200 dark:bg-slate-700 dark:border-slate-600 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div 
-                          className="w-12 h-12 rounded-full flex items-center justify-center text-2xl text-white font-bold"
-                          style={{ backgroundColor: type.color || '#3B82F6' }}
-                        >
-                          {type.name.charAt(0)}
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            {type.name}
-                          </h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">Code: {type.code}</p>
-                          {type.description && (
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                              {type.description}
-                            </p>
-                          )}
-                        </div>
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+          </div>
+        ) : filteredTypes.length === 0 ? (
+          <Card className="border border-gray-100 dark:border-slate-700">
+            <CardContent className="text-center py-12">
+              <ClipboardList className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No leave types found</h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">Create your first leave type to get started</p>
+            </CardContent>
+          </Card>
+        ) : viewMode === 'card' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredTypes.map((type) => (
+              <Card key={type.id} className="border border-gray-200 dark:border-slate-700 hover:shadow-lg transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-12 h-12 rounded-full flex items-center justify-center text-2xl text-white font-bold"
+                        style={{ backgroundColor: type.color || '#3B82F6' }}
+                      >
+                        {type.name.charAt(0)}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className={type.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                          {type.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                        
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => openEditModal(type)}
-                          className="p-2 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleDeleteLeaveType(type.id)}
-                          className="p-2 text-red-600 hover:text-red-700 border-gray-300 dark:border-gray-600 hover:border-red-300 dark:hover:border-red-500"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                          {type.name}
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Code: {type.code}</p>
+                        {type.description && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                            {type.description}
+                          </p>
+                        )}
                       </div>
                     </div>
-                    
-                    <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                      <div className="bg-blue-50 dark:bg-blue-900 rounded-lg p-3">
-                        <span className="text-blue-700 dark:text-blue-300 font-medium">Default Days</span>
-                        <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                          {type.default_quota_days || 0}
-                        </div>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className={type.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                        {type.is_active ? 'Active' : 'Inactive'}
+                      </Badge>
                       
-                      <div className="bg-green-50 dark:bg-green-900 rounded-lg p-3">
-                        <span className="text-green-700 dark:text-green-300 font-medium">Notice Period</span>
-                        <div className="text-lg font-bold text-green-600 dark:text-green-400">
-                          {type.min_advance_notice_days || 0} days
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Additional Info */}
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {type.is_paid && (
-                        <Badge className="bg-green-100 text-green-800 text-xs">
-                          💰 Paid Leave
-                        </Badge>
-                      )}
-                      {type.allow_carry_forward && (
-                        <Badge className="bg-indigo-100 text-indigo-800 text-xs">
-                          📅 Carry Forward ({type.max_carry_forward_days || 0} days)
-                        </Badge>
-                      )}
-                      {type.requires_approval && (
-                        <Badge className="bg-orange-100 text-orange-800 text-xs">
-                          ✋ Requires Approval
-                        </Badge>
-                      )}
-                      {type.requires_medical_certificate && (
-                        <Badge className="bg-red-100 text-red-800 text-xs">
-                          🏥 Medical Cert Required
-                        </Badge>
-                      )}
-                      {type.max_consecutive_days && (
-                        <Badge className="bg-purple-100 text-purple-800 text-xs">
-                          📊 Max {type.max_consecutive_days} consecutive days
-                        </Badge>
-                      )}
-                      {type.has_annual_quota && (
-                        <Badge className="bg-blue-100 text-blue-800 text-xs">
-                          📈 Annual Quota ({type.quota_calculation_method})
-                        </Badge>
-                      )}
-                      {type.is_prorated && (
-                        <Badge className="bg-yellow-100 text-yellow-800 text-xs">
-                          ⚖️ Prorated
-                        </Badge>
-                      )}
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => openEditModal(type)}
+                        className="p-2 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleDeleteLeaveType(type.id)}
+                        className="p-2 text-red-600 hover:text-red-700 border-gray-300 dark:border-gray-600 hover:border-red-300 dark:hover:border-red-500"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              /* List View */
-              <div className="grid grid-cols-1 gap-4">
+                  
+                  <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                    <div className="bg-blue-50 dark:bg-blue-900 rounded-lg p-3">
+                      <span className="text-blue-700 dark:text-blue-300 font-medium">Default Days</span>
+                      <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                        {type.default_quota_days || 0}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-green-50 dark:bg-green-900 rounded-lg p-3">
+                      <span className="text-green-700 dark:text-green-300 font-medium">Notice Period</span>
+                      <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                        {type.min_advance_notice_days || 0} days
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Additional Info */}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {type.is_paid && (
+                      <Badge className="bg-green-100 text-green-800 text-xs">
+                        💰 Paid Leave
+                      </Badge>
+                    )}
+                    {type.allow_carry_forward && (
+                      <Badge className="bg-indigo-100 text-indigo-800 text-xs">
+                        📅 Carry Forward ({type.max_carry_forward_days || 0} days)
+                      </Badge>
+                    )}
+                    {type.requires_approval && (
+                      <Badge className="bg-orange-100 text-orange-800 text-xs">
+                        ✋ Requires Approval
+                      </Badge>
+                    )}
+                    {type.requires_medical_certificate && (
+                      <Badge className="bg-red-100 text-red-800 text-xs">
+                        🏥 Medical Cert Required
+                      </Badge>
+                    )}
+                    {type.max_consecutive_days && (
+                      <Badge className="bg-purple-100 text-purple-800 text-xs">
+                        📊 Max {type.max_consecutive_days} consecutive days
+                      </Badge>
+                    )}
+                    {type.has_annual_quota && (
+                      <Badge className="bg-blue-100 text-blue-800 text-xs">
+                        📈 Annual Quota ({type.quota_calculation_method})
+                      </Badge>
+                    )}
+                    {type.is_prorated && (
+                      <Badge className="bg-yellow-100 text-yellow-800 text-xs">
+                        ⚖️ Prorated
+                      </Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card className="border border-gray-100 dark:border-slate-700">
+            {/* List View */}
+            <CardContent className="p-0">
+              <div className="divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredTypes.map((type) => (
                   <div
                     key={type.id}
-                    className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                    className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
                     <div className="flex items-center gap-4 flex-1">
                       <div 
@@ -754,9 +786,9 @@ export default function LeaveTypesPage() {
                   </div>
                 ))}
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Edit Modal */}

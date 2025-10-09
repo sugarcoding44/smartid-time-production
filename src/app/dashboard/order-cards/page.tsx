@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,8 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { toast } from 'sonner'
+import { HeaderSkeleton, ProductCardSkeleton, OrderHistorySkeleton } from '@/components/ui/loading-skeletons'
+import { Loader2, ShoppingCart, Package, Check, Clock, Truck, CreditCard, Shield, Smartphone, CheckCircle, XCircle } from 'lucide-react'
 
 // Card product options
 const cardProducts = [
@@ -34,33 +36,24 @@ const cardProducts = [
   }
 ]
 
-// Order history
-const orderHistory = [
-  {
-    id: 'ORD-2024-001',
-    date: '2024-01-15',
-    items: 'SmartID NFC Cards × 500',
-    total: 5000.00,
-    status: 'delivered',
-    tracking: 'TRK123456789'
-  },
-  {
-    id: 'ORD-2024-002',
-    date: '2024-02-20',
-    items: 'SmartID NFC Cards × 300',
-    total: 3000.00,
-    status: 'in_transit',
-    tracking: 'TRK987654321'
-  },
-  {
-    id: 'ORD-2024-003',
-    date: '2024-03-01',
-    items: 'SmartID NFC Cards × 100',
-    total: 1000.00,
-    status: 'processing',
-    tracking: null
-  }
-]
+// Types
+type OrderItem = {
+  name: string
+  quantity: number
+  price: number
+}
+
+type Order = {
+  id: string
+  order_number: string
+  contact_name: string
+  items: OrderItem[]
+  total_amount: number
+  status: string
+  tracking_number?: string | null
+  ordered_at: string
+  created_at: string
+}
 
 const statusStyles = {
   delivered: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400',
@@ -72,6 +65,9 @@ const statusStyles = {
 export default function OrderCardsPage() {
   const [cartItems, setCartItems] = useState<{[key: string]: number}>({})
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
+  const [orderHistory, setOrderHistory] = useState<Order[]>([])
+  const [isLoadingOrders, setIsLoadingOrders] = useState(true)
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false)
   const [deliveryInfo, setDeliveryInfo] = useState({
     contactName: '',
     phone: '',
@@ -80,6 +76,30 @@ export default function OrderCardsPage() {
     specialInstructions: '',
     urgency: 'standard'
   })
+
+  // Fetch order history
+  useEffect(() => {
+    fetchOrderHistory()
+  }, [])
+
+  const fetchOrderHistory = async () => {
+    try {
+      setIsLoadingOrders(true)
+      const response = await fetch('/api/card-orders')
+      const data = await response.json()
+      
+      if (data.success) {
+        setOrderHistory(data.data)
+      } else {
+        toast.error('Failed to load order history')
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error)
+      toast.error('Failed to load order history')
+    } finally {
+      setIsLoadingOrders(false)
+    }
+  }
 
   const addToCart = (productId: string, quantity: number) => {
     if (quantity < 1) return
@@ -117,7 +137,7 @@ export default function OrderCardsPage() {
     return Object.values(cartItems).reduce((sum, quantity) => sum + quantity, 0)
   }
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (getCartItemCount() === 0) {
       toast.error('Your cart is empty')
       return
@@ -128,56 +148,115 @@ export default function OrderCardsPage() {
       return
     }
 
-    // Simulate order placement
-    setTimeout(() => {
-      toast.success('Order placed successfully! You will receive a confirmation email shortly.')
-      setCartItems({})
-      setIsCheckoutOpen(false)
-      setDeliveryInfo({
-        contactName: '',
-        phone: '',
-        email: '',
-        address: '',
-        specialInstructions: '',
-        urgency: 'standard'
+    try {
+      setIsPlacingOrder(true)
+      
+      // Convert cart items to order items
+      const items = Object.entries(cartItems).map(([productId, quantity]) => {
+        const product = cardProducts.find(p => p.id === productId)
+        return {
+          name: product?.name || 'SmartID NFC Card',
+          quantity,
+          price: product?.price || 10.00
+        }
       })
-    }, 1000)
+      
+      // Calculate delivery fee based on urgency
+      const deliveryFee = deliveryInfo.urgency === 'urgent' ? 50 : 
+                          deliveryInfo.urgency === 'express' ? 25 : 0
+      
+      const orderData = {
+        contact_name: deliveryInfo.contactName,
+        phone: deliveryInfo.phone,
+        email: deliveryInfo.email,
+        address: deliveryInfo.address,
+        items,
+        total_amount: getCartTotal() + deliveryFee,
+        delivery_fee: deliveryFee,
+        urgency: deliveryInfo.urgency,
+        special_instructions: deliveryInfo.specialInstructions
+      }
+      
+      const response = await fetch('/api/card-orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData)
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        toast.success('Order placed successfully! You will receive a confirmation email shortly.')
+        setCartItems({})
+        setIsCheckoutOpen(false)
+        setDeliveryInfo({
+          contactName: '',
+          phone: '',
+          email: '',
+          address: '',
+          specialInstructions: '',
+          urgency: 'standard'
+        })
+        // Refresh order history
+        fetchOrderHistory()
+      } else {
+        toast.error(result.error || 'Failed to place order')
+      }
+    } catch (error) {
+      console.error('Order placement error:', error)
+      toast.error('Failed to place order. Please try again.')
+    } finally {
+      setIsPlacingOrder(false)
+    }
   }
 
   return (
     <DashboardLayout>
-      <div className="space-y-8">
+      <div className="max-w-6xl mx-auto space-y-6">
         {/* Gradient Header */}
-        <div className="bg-white dark:bg-gradient-to-br dark:from-violet-900 dark:to-purple-900 rounded-2xl p-8 border-0 shadow-lg dark:border dark:border-purple-800/50">
+        <div className="rounded-2xl p-8 border-0 shadow-lg header-card">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Order SmartID NFC Cards 🛒</h1>
-              <p className="text-gray-600 dark:text-purple-200/90">SMK Bukit Jelutong • Order encrypted NFC cards with eWallet functionality</p>
+              <h1 className="text-3xl font-bold mb-2">Order SmartID Cards 🛒</h1>
+              <p className="opacity-90">SMK Bukit Jelutong • Professional NFC cards with secure eWallet functionality</p>
             </div>
             <div className="flex gap-6 mt-4 lg:mt-0">
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">RM 10</div>
-                <div className="text-sm text-gray-500 dark:text-purple-200/70">Per Card</div>
+                <div className="text-2xl font-bold">RM 10.00</div>
+                <div className="text-sm opacity-70">per card</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">100</div>
-                <div className="text-sm text-gray-500 dark:text-purple-200/70">Min Order</div>
+                <div className="text-2xl font-bold">100+</div>
+                <div className="text-sm opacity-70">min order</div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Cart Section */}
-        <div className="flex justify-end">
-          {getCartItemCount() > 0 && (
-            <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
+        {getCartItemCount() > 0 && (
+          <div className="bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900 rounded-lg flex items-center justify-center">
+                  <ShoppingCart className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div>
+                  <div className="font-semibold text-gray-900 dark:text-white">
+                    {getCartItemCount()} item{getCartItemCount() > 1 ? 's' : ''} in cart
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-300">
+                    Total: RM {getCartTotal().toFixed(2)}
+                  </div>
+                </div>
+              </div>
+              
+              <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg relative">
-                    <span className="mr-2">🛒</span>
-                    Cart ({getCartItemCount()})
-                    <Badge className="ml-2 bg-white/20 text-white border-0">
-                      RM {getCartTotal().toFixed(2)}
-                    </Badge>
+                  <Button className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                    Checkout
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
@@ -296,8 +375,19 @@ export default function OrderCardsPage() {
                     </div>
 
                     <div className="flex gap-3 pt-4">
-                      <Button onClick={handleCheckout} className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600">
-                        Place Order
+                      <Button 
+                        onClick={handleCheckout} 
+                        className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600"
+                        disabled={isPlacingOrder}
+                      >
+                        {isPlacingOrder ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Placing Order...
+                          </>
+                        ) : (
+                          'Place Order'
+                        )}
                       </Button>
                       <Button variant="outline" onClick={() => setIsCheckoutOpen(false)} className="flex-1">
                         Continue Shopping
@@ -306,131 +396,153 @@ export default function OrderCardsPage() {
                   </div>
                 </DialogContent>
               </Dialog>
-            )}
-        </div>
+            </div>
+          </div>
+        )}
 
-        {/* Product Info */}
-        <Card className="bg-white border-0 shadow-lg dark:bg-slate-800 dark:border-slate-700">
-          <CardContent className="p-6">
-            <div className="text-center">
-              <div className="text-4xl mb-4">💳</div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-50 mb-2">SmartID NFC Card</h2>
-              <p className="text-gray-600 dark:text-slate-400 mb-4">The only card you need for your school - secure, encrypted, and feature-rich</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="text-center p-4 bg-gray-50 dark:bg-slate-700 rounded-xl">
-                  <div className="text-2xl mb-2">🔒</div>
-                  <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-1">Encrypted Security</h3>
-                  <p className="text-sm text-gray-600 dark:text-slate-400">Cannot be duplicated or cloned</p>
-                </div>
-                <div className="text-center p-4 bg-gray-50 dark:bg-slate-700 rounded-xl">
-                  <div className="text-2xl mb-2">💰</div>
-                  <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-1">Built-in eWallet</h3>
-                  <p className="text-sm text-gray-600 dark:text-slate-400">Pay at cafeteria with SmartPOS</p>
-                </div>
-                <div className="text-center p-4 bg-gray-50 dark:bg-slate-700 rounded-xl">
-                  <div className="text-2xl mb-2">📱</div>
-                  <h3 className="font-semibold text-gray-900 dark:text-slate-100 mb-1">Easy Top-up</h3>
-                  <p className="text-sm text-gray-600 dark:text-slate-400">Cash or SmartPay app</p>
-                </div>
+        {/* Product Features */}
+        <div className="grid md:grid-cols-3 gap-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <div className="font-semibold text-gray-900 dark:text-white text-sm">Secure & Encrypted</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Cannot be duplicated</div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                <CreditCard className="w-5 h-5 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <div className="font-semibold text-gray-900 dark:text-white text-sm">Built-in eWallet</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Cafeteria payments</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                <Smartphone className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <div className="font-semibold text-gray-900 dark:text-white text-sm">Easy Top-up</div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Cash or mobile app</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Product Card */}
-        <div className="max-w-2xl mx-auto">
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
           {cardProducts.map((product) => (
-            <Card key={product.id} className="bg-white border-0 shadow-xl dark:bg-slate-800 dark:border-slate-700 hover:shadow-2xl transition-all duration-300 overflow-hidden">
-              <CardContent className="p-8">
-                <div className="text-center mb-6">
-                  <div className="text-6xl mb-4">{product.image}</div>
-                  <h3 className="text-3xl font-bold text-gray-900 dark:text-slate-100 mb-2">{product.name}</h3>
-                  <p className="text-lg text-gray-600 dark:text-slate-400 mb-4">{product.description}</p>
-                  
-                  <div className="flex items-center justify-center gap-3 mb-4">
-                    <span className="text-4xl font-bold text-indigo-600 dark:text-indigo-400">
-                      RM {product.price.toFixed(2)}
-                    </span>
-                    <span className="text-lg text-gray-500 dark:text-slate-400">per card</span>
+            <div key={product.id} className="mb-6 last:mb-0">
+              {/* Product Header */}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900 rounded-lg flex items-center justify-center">
+                    <CreditCard className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                   </div>
-                  
-                  <Badge variant="outline" className="mb-4 text-sm px-3 py-1">
-                    Minimum order: {product.minOrder} cards
-                  </Badge>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-                  {product.features.map((feature, index) => (
-                    <div key={index} className="flex items-start gap-2 text-sm p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
-                      <span className="text-emerald-500 mt-0.5">✓</span>
-                      <span className="text-gray-700 dark:text-slate-300 font-medium">{feature}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-center gap-4 max-w-md mx-auto">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor={`quantity-${product.id}`} className="text-sm font-medium">Quantity:</Label>
-                    <Input
-                      type="number"
-                      min={product.minOrder}
-                      step={product.minOrder}
-                      defaultValue={product.minOrder}
-                      id={`quantity-${product.id}`}
-                      className="w-24"
-                    />
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{product.name}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{product.description}</p>
                   </div>
-                  <Button
-                    onClick={() => {
-                      const input = document.getElementById(`quantity-${product.id}`) as HTMLInputElement
-                      const quantity = parseInt(input.value) || product.minOrder
-                      addToCart(product.id, quantity)
-                    }}
-                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 flex-1 sm:flex-none px-8"
-                    size="lg"
-                  >
-                    <span className="mr-2">🛒</span>
-                    Add to Cart
-                  </Button>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                    RM {product.price.toFixed(2)}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">per card</div>
+                </div>
+              </div>
+              
+              {/* Compact Features */}
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {product.features.map((feature, index) => (
+                  <div key={index} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                    <Check className="w-3 h-3 text-green-600" />
+                    <span>{feature}</span>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Order Form */}
+              <div className="flex items-end gap-3">
+                <div className="flex-1">
+                  <Label htmlFor={`quantity-${product.id}`} className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                    Quantity (min {product.minOrder})
+                  </Label>
+                  <Input
+                    type="number"
+                    min={product.minOrder}
+                    step={product.minOrder}
+                    defaultValue={product.minOrder}
+                    id={`quantity-${product.id}`}
+                    className="h-10"
+                  />
+                </div>
+                <Button
+                  onClick={() => {
+                    const input = document.getElementById(`quantity-${product.id}`) as HTMLInputElement
+                    const quantity = parseInt(input.value) || product.minOrder
+                    addToCart(product.id, quantity)
+                  }}
+                  className="h-10 bg-indigo-600 hover:bg-indigo-700"
+                >
+                  <ShoppingCart className="w-4 h-4 mr-2" />
+                  Add to Cart
+                </Button>
+              </div>
+            </div>
           ))}
         </div>
 
         {/* Order History */}
-        <Card className="bg-white border-0 shadow-lg dark:bg-slate-800 dark:border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-gray-900 dark:text-slate-50 flex items-center gap-2">
-              <span>📦</span>
-              Recent Orders
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+        {isLoadingOrders ? (
+          <OrderHistorySkeleton rows={5} />
+        ) : (
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Order History</h2>
+            <div className="space-y-3">
               {orderHistory.map((order) => (
-                <div key={order.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="font-medium text-gray-900 dark:text-slate-100">{order.id}</span>
-                      <Badge className={statusStyles[order.status as keyof typeof statusStyles]}>
-                        {order.status.replace('_', ' ')}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-slate-400">{order.items}</p>
-                    <p className="text-xs text-gray-500 dark:text-slate-500">Ordered on {new Date(order.date).toLocaleDateString()}</p>
+              <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-medium ${
+                    order.status === 'Delivered' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
+                    order.status === 'In Transit' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
+                    order.status === 'Processing' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' :
+                    'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                  }`}>
+                    #{order.id}
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-900 dark:text-slate-100">RM {order.total.toFixed(2)}</p>
-                    {order.tracking && (
-                      <p className="text-xs text-indigo-600 dark:text-indigo-400">Track: {order.tracking}</p>
-                    )}
+                  <div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      {order.quantity} cards • {order.date}
+                    </div>
+                    <div className={`text-xs px-2 py-0.5 rounded inline-block ${
+                      order.status === 'Delivered' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
+                      order.status === 'In Transit' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
+                      order.status === 'Processing' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' :
+                      'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                    }`}>
+                      {order.status}
+                    </div>
                   </div>
                 </div>
-              ))}
+                <div className="font-semibold text-gray-900 dark:text-white text-sm">
+                  RM {order.amount}
+                </div>
+              </div>
+            ))}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   )

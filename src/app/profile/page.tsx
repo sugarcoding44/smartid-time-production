@@ -32,6 +32,8 @@ import {
   Database,
   Activity
 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { LocationRecalibration } from '@/components/location/location-recalibration'
 
 type SubscriptionPlan = {
   name: string
@@ -73,13 +75,14 @@ type AdminProfile = {
 export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [activeTab, setActiveTab] = useState<'profile' | 'institution' | 'subscription' | 'security'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'institution' | 'subscription' | 'security' | 'location'>('profile')
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [isEditingInstitution, setIsEditingInstitution] = useState(false)
 
   // Real data from Supabase
   const [adminProfile, setAdminProfile] = useState<AdminProfile | null>(null)
   const [institutionProfile, setInstitutionProfile] = useState<InstitutionProfile | null>(null)
+  const [profileData, setProfileData] = useState<any>(null)
   const [subscription, setSubscription] = useState<SubscriptionPlan>({
     name: 'SmartID TIME Premium',
     status: 'active',
@@ -115,38 +118,35 @@ export default function ProfilePage() {
     try {
       setLoading(true)
       
-      // Use the working debug endpoint like other pages
-      const debugResponse = await fetch('/api/debug/supabase')
-      const debugData = await debugResponse.json()
+      // Get current user from Supabase auth
+      const supabase = createClient()
+      const { data: { user: authUser } } = await supabase.auth.getUser()
       
-      // Get the actual authenticated user ID
-      const authTest = debugData.tests.find((t: any) => t.name === 'Auth Session')
-      const currentAuthUserId = authTest?.data?.userId
-      
-      if (!currentAuthUserId) {
-        toast.error('Authentication required')
+      if (!authUser) {
+        toast.error('Please sign in to view profile')
         return
       }
       
-      // Find the actual current user from service test data
-      const serviceTest = debugData.tests.find((t: any) => t.name === 'Service Role Client')
-      const allUsers = serviceTest?.data || []
-      
-      let currentUser = allUsers.find((u: any) => u.auth_user_id === currentAuthUserId)
-      if (!currentUser) {
-        currentUser = allUsers.find((u: any) => u.id === currentAuthUserId)
-      }
+      // Get user profile data
+      const { data: currentUser } = await supabase
+        .from('users')
+        .select('*')
+        .or(`auth_user_id.eq.${authUser.id},id.eq.${authUser.id}`)
+        .single()
+
+      // Location data would come from institution_locations table if it existed
+      setProfileData(null)
       
       console.log('👤 Found current user for Profile Settings:', currentUser)
       
       if (currentUser) {
-        // Set admin profile from debug data
+        // Set admin profile from user data
         setAdminProfile({
           id: currentUser.id,
-          full_name: currentUser.name || currentUser.full_name || '',
+          full_name: currentUser.full_name || '',
           email: currentUser.email || '',
           phone: currentUser.phone || '',
-          role: getDisplayRole(currentUser.smartid_hub_role || currentUser.primary_role || 'admin'),
+          role: getDisplayRole(currentUser.smartid_time_role || currentUser.primary_role || 'admin'),
           last_login: new Date().toISOString(),
           two_factor_enabled: false,
           notifications_enabled: true,
@@ -350,14 +350,17 @@ export default function ProfilePage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border-0 shadow-lg">
+        <div className="rounded-2xl p-6 border-0 shadow-lg header-card">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-xl">
+            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-xl">
               {adminProfile.full_name.charAt(0)}
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Profile Settings</h1>
-              <p className="text-gray-600 dark:text-gray-400">Manage your account, institution, and subscription details</p>
+              <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-2">
+                <Settings className="w-8 h-8 text-white" />
+                Profile Settings
+              </h1>
+              <p className="text-white/90 opacity-90">Manage your account, institution, and subscription details</p>
             </div>
           </div>
         </div>
@@ -367,6 +370,7 @@ export default function ProfilePage() {
           {[
             { key: 'profile', label: 'Personal Profile', icon: User },
             { key: 'institution', label: 'Institution', icon: Building2 },
+            { key: 'location', label: 'Location Settings', icon: MapPin },
             { key: 'subscription', label: 'Subscription', icon: Crown },
             { key: 'security', label: 'Security', icon: Shield }
           ].map(({ key, label, icon: Icon }) => (
@@ -725,6 +729,43 @@ export default function ProfilePage() {
               </Card>
             </div>
           </div>
+        )}
+
+        {/* Location Tab */}
+        {activeTab === 'location' && (
+          <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="w-5 h-5" />
+                Location Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-6">
+                <p className="text-gray-600 dark:text-gray-400">
+                  Update your institution's GPS coordinates and attendance radius. This location will be used for automatic attendance approval and location-based features.
+                </p>
+              </div>
+              <LocationRecalibration 
+                currentLocation={{
+                  address: profileData?.address || institutionProfile?.address || '',
+                  city: profileData?.city || institutionProfile?.city || '',
+                  state: profileData?.state || institutionProfile?.state || '',
+                  postalCode: profileData?.postal_code || institutionProfile?.postal_code || '',
+                  country: profileData?.country || 'Malaysia',
+                  latitude: profileData?.latitude || 0,
+                  longitude: profileData?.longitude || 0,
+                  attendanceRadius: profileData?.attendance_radius || 300
+                }}
+                onLocationUpdate={(location) => {
+                  console.log('Location updated:', location)
+                  toast.success('Location updated successfully!')
+                  // Optionally refresh profile data
+                  loadProfileData()
+                }}
+              />
+            </CardContent>
+          </Card>
         )}
 
         {/* Security Tab */}

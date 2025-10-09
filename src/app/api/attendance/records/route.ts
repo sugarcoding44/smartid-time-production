@@ -9,6 +9,15 @@ export async function GET(request: NextRequest) {
     const institutionId = searchParams.get('institutionId')
     const userId = searchParams.get('userId')
     const date = searchParams.get('date') // YYYY-MM-DD format
+    
+    // Validate date format
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+    if (date && !dateRegex.test(date)) {
+      return NextResponse.json(
+        { error: 'Invalid date format. Use YYYY-MM-DD format.' },
+        { status: 400 }
+      )
+    }
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
@@ -78,8 +87,16 @@ export async function GET(request: NextRequest) {
         user_id,
         check_in_time,
         check_out_time,
-        work_hours,
+        actual_working_hours,
+        overtime_hours,
         status,
+        date,
+        verification_method,
+        device_id,
+        check_in_location,
+        check_out_location,
+        work_group_id,
+        employee_id,
         created_at
       `)
       .in('user_id', userIds)
@@ -90,20 +107,16 @@ export async function GET(request: NextRequest) {
     }
 
     if (date) {
-      const dateStart = new Date(date)
-      const dateEnd = new Date(date)
-      dateEnd.setDate(dateEnd.getDate() + 1)
-      
-      query = query
-        .gte('check_in_time', dateStart.toISOString())
-        .lt('check_in_time', dateEnd.toISOString())
+      // Use the date field directly since your schema has it
+      query = query.eq('date', date)
     } else if (startDate && endDate) {
       query = query
-        .gte('check_in_time', startDate)
-        .lte('check_in_time', endDate)
+        .gte('date', startDate)
+        .lte('date', endDate)
     }
 
     const { data: records, error } = await query
+      .order('date', { ascending: false })
       .order('check_in_time', { ascending: false })
       .limit(100)
 
@@ -118,7 +131,7 @@ export async function GET(request: NextRequest) {
     const recordUserIds = [...new Set(records?.map(r => r.user_id) || [])]
     const { data: users } = await serviceSupabase
       .from('users')
-      .select('id, full_name, employee_id, primary_role')
+      .select('id, full_name, employee_id, primary_role, ic_number')
       .in('id', recordUserIds)
     
     const userMap = new Map(users?.map(u => [u.id, u]) || [])
@@ -126,17 +139,27 @@ export async function GET(request: NextRequest) {
     // Transform the data
     const transformedRecords = records?.map(record => {
       const user = userMap.get(record.user_id)
+      // Calculate work hours from actual_working_hours and overtime_hours
+      const workHours = (record.actual_working_hours || 0) + (record.overtime_hours || 0)
+      
       return {
         id: record.id,
         userId: record.user_id,
         userName: user?.full_name || 'Unknown',
-        employeeId: user?.employee_id || 'N/A',
+        employeeId: user?.employee_id || record.employee_id || 'N/A',
+        icNumber: user?.ic_number,
         role: user?.primary_role || 'N/A',
         checkInTime: record.check_in_time,
         checkOutTime: record.check_out_time,
-        workHours: record.work_hours,
+        workHours: workHours,
+        actualWorkingHours: record.actual_working_hours,
+        overtimeHours: record.overtime_hours,
         status: record.status || (record.check_out_time ? 'completed' : 'in_progress'),
-        date: new Date(record.check_in_time).toISOString().split('T')[0]
+        date: record.date || (record.check_in_time ? new Date(record.check_in_time).toISOString().split('T')[0] : null),
+        verificationMethod: record.verification_method,
+        deviceId: record.device_id,
+        location: record.check_in_location || null,
+        workGroupId: record.work_group_id
       }
     }) || []
 

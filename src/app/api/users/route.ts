@@ -27,13 +27,13 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Generate employee ID
+    // Generate employee ID with correct prefix format to match database constraints
     const typePrefix = {
-      teacher: 'TC',
-      staff: 'ST',
-      student: 'SD',
-      admin: 'AD'
-    }[primary_role as string] || 'US'
+      teacher: 'TC-',
+      staff: 'STF-',
+      student: 'STD-',
+      admin: 'ADM-'
+    }[primary_role as string] || 'POS-'
 
     // Get count of existing users with same role in the institution
     const { count } = await serviceSupabase

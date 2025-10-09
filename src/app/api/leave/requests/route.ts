@@ -47,9 +47,9 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Check if leave_requests table exists
+    // Check if leave_applications table exists
     const { data: tableCheck, error: tableError } = await serviceSupabase
-      .from('leave_requests')
+      .from('leave_applications')
       .select('id')
       .limit(1)
 
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
             appliedOn: '2024-03-17'
           }
         ],
-        message: 'Using mock data - leave_requests table not found'
+        message: 'Using mock data - leave_applications table not found'
       })
     }
 
@@ -99,18 +99,22 @@ export async function GET(request: NextRequest) {
     
     // Build query
     let query = serviceSupabase
-      .from('leave_requests')
+      .from('leave_applications')
       .select(`
         id,
+        application_number,
         user_id,
         leave_type_id,
         start_date,
         end_date,
+        total_days,
         reason,
         status,
-        created_at,
-        approved_by,
-        approved_at
+        applied_date,
+        approved_date,
+        rejected_date,
+        approval_comments,
+        rejection_reason
       `)
       .in('user_id', userIds)
 
@@ -124,7 +128,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { data: requests, error } = await query
-      .order('created_at', { ascending: false })
+      .order('applied_date', { ascending: false })
       .limit(100)
 
     if (error) {
@@ -138,7 +142,7 @@ export async function GET(request: NextRequest) {
     const requestUserIds = [...new Set(requests?.map(r => r.user_id) || [])]
     const { data: users } = await serviceSupabase
       .from('users')
-      .select('id, full_name, employee_id, primary_role')
+      .select('id, full_name, employee_id, primary_role, ic_number')
       .in('id', requestUserIds)
     
     const userMap = new Map(users?.map(u => [u.id, u]) || [])
@@ -147,7 +151,7 @@ export async function GET(request: NextRequest) {
     const leaveTypeIds = [...new Set(requests?.map(r => r.leave_type_id).filter(Boolean) || [])]
     const { data: leaveTypes } = await serviceSupabase
       .from('leave_types')
-      .select('id, name')
+      .select('id, name, color, code')
       .in('id', leaveTypeIds)
     
     const leaveTypeMap = new Map(leaveTypes?.map(lt => [lt.id, lt]) || [])
@@ -159,18 +163,28 @@ export async function GET(request: NextRequest) {
       
       return {
         id: request.id,
-        userId: request.user_id,
-        userName: user?.full_name || 'Unknown',
-        employeeId: user?.employee_id || 'N/A',
-        leaveType: leaveType?.name || 'Unknown',
-        startDate: request.start_date,
-        endDate: request.end_date,
-        days: calculateDays(request.start_date, request.end_date),
+        application_number: request.application_number,
+        user_id: request.user_id,
+        user: user ? {
+          full_name: user.full_name,
+          employee_id: user.employee_id,
+          primary_role: user.primary_role,
+          ic_number: user.ic_number
+        } : null,
+        leave_type_id: request.leave_type_id,
+        leave_type: leaveType ? {
+          name: leaveType.name,
+          color: leaveType.color || 'blue',
+          code: leaveType.code
+        } : null,
+        start_date: request.start_date,
+        end_date: request.end_date,
+        days_count: request.total_days || calculateDays(request.start_date, request.end_date),
         reason: request.reason,
         status: request.status,
-        appliedOn: request.created_at,
-        approvedBy: request.approved_by,
-        approvedAt: request.approved_at
+        applied_date: request.applied_date,
+        reviewed_date: request.approved_date || request.rejected_date,
+        notes: request.approval_comments || request.rejection_reason
       }
     }) || []
 
@@ -220,7 +234,7 @@ export async function POST(request: NextRequest) {
 
     // Check if table exists
     const { error: tableError } = await serviceSupabase
-      .from('leave_requests')
+      .from('leave_applications')
       .select('id')
       .limit(1)
 
@@ -235,16 +249,19 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Create leave request
+    // Create leave application
     const { data: newRequest, error: createError } = await serviceSupabase
-      .from('leave_requests')
+      .from('leave_applications')
       .insert({
         user_id,
         leave_type_id,
         start_date,
         end_date,
+        total_days: calculateDays(start_date, end_date),
         reason,
-        status: 'pending'
+        status: 'pending',
+        applied_date: new Date().toISOString(),
+        application_number: `LA${new Date().getFullYear()}${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`
       })
       .select()
       .single()
@@ -277,4 +294,101 @@ function calculateDays(startDate: string, endDate: string): number {
   const diffTime = Math.abs(end.getTime() - start.getTime())
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
   return diffDays
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const applicationId = searchParams.get('id')
+    const action = searchParams.get('action') // 'approve' or 'reject'
+    
+    if (!applicationId || !action) {
+      return NextResponse.json(
+        { error: 'Application ID and action are required' },
+        { status: 400 }
+      )
+    }
+
+    const body = await request.json()
+    const { notes } = body
+
+    // Get the authenticated user
+    const supabase = await createServerClient()
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    // Create a service role client for admin operations
+    const serviceSupabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    // Get current user info
+    const { data: currentUser } = await serviceSupabase
+      .from('users')
+      .select('id, full_name')
+      .or(`auth_user_id.eq.${user.id},id.eq.${user.id}`)
+      .single()
+
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
+      current_approver_id: currentUser.id
+    }
+
+    if (action === 'approve') {
+      updateData.status = 'approved'
+      updateData.approved_date = new Date().toISOString()
+      if (notes) {
+        updateData.approval_comments = notes
+      }
+    } else if (action === 'reject') {
+      updateData.status = 'rejected'
+      updateData.rejected_date = new Date().toISOString()
+      if (notes) {
+        updateData.rejection_reason = notes
+      }
+    }
+
+    const { data: updatedApplication, error } = await serviceSupabase
+      .from('leave_applications')
+      .update(updateData)
+      .eq('id', applicationId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Leave application update error:', error)
+      return NextResponse.json(
+        { error: 'Failed to update leave application: ' + error.message },
+        { status: 400 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Leave application ${action}d successfully`,
+      data: updatedApplication
+    })
+
+  } catch (error) {
+    console.error('Leave application update error:', error)
+    return NextResponse.json(
+      { error: 'Failed to update leave application' },
+      { status: 500 }
+    )
+  }
 }

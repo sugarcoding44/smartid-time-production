@@ -9,12 +9,13 @@ import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { Search, Filter, Users, Calendar, Edit, RefreshCw, Download, Plus } from 'lucide-react'
+import { Search, Filter, Users, Calendar, Edit, RefreshCw, Download, Plus, Eye, History, FileText } from 'lucide-react'
 
 type User = {
   id: string
   full_name: string
   employee_id: string
+  ic_number?: string
   primary_role: string
   department?: string
 }
@@ -53,7 +54,11 @@ export default function LeaveBalancesPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false)
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
   const [selectedBalance, setSelectedBalance] = useState<LeaveBalance | null>(null)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [leaveHistory, setLeaveHistory] = useState<any[]>([])
 
   // Form state
   const [editFormData, setEditFormData] = useState({
@@ -122,10 +127,10 @@ export default function LeaveBalancesPage() {
     try {
       // Mock users data - in real implementation, fetch from /api/users
       const mockUsers: User[] = [
-        { id: '1', full_name: 'John Doe', employee_id: 'TC001', primary_role: 'teacher', department: 'Mathematics' },
-        { id: '2', full_name: 'Jane Smith', employee_id: 'ST001', primary_role: 'staff', department: 'Administration' },
-        { id: '3', full_name: 'Bob Johnson', employee_id: 'SD001', primary_role: 'student', department: 'Grade 10' },
-        { id: '4', full_name: 'Alice Brown', employee_id: 'TC002', primary_role: 'teacher', department: 'Science' }
+        { id: '1', full_name: 'John Doe', employee_id: 'TC001', ic_number: '880123-10-1234', primary_role: 'teacher', department: 'Mathematics' },
+        { id: '2', full_name: 'Jane Smith', employee_id: 'ST001', ic_number: '900456-08-5678', primary_role: 'staff', department: 'Administration' },
+        { id: '3', full_name: 'Bob Johnson', employee_id: 'SD001', ic_number: '050789-12-9012', primary_role: 'student', department: 'Grade 10' },
+        { id: '4', full_name: 'Alice Brown', employee_id: 'TC002', ic_number: '920345-06-3456', primary_role: 'teacher', department: 'Science' }
       ]
       setUsers(mockUsers)
     } catch (error) {
@@ -158,10 +163,10 @@ export default function LeaveBalancesPage() {
       
       // Generate balances for each user-leave type combination
       const mockUsers = [
-        { id: '1', full_name: 'John Doe', employee_id: 'TC001', primary_role: 'teacher' },
-        { id: '2', full_name: 'Jane Smith', employee_id: 'ST001', primary_role: 'staff' },
-        { id: '3', full_name: 'Bob Johnson', employee_id: 'SD001', primary_role: 'student' },
-        { id: '4', full_name: 'Alice Brown', employee_id: 'TC002', primary_role: 'teacher' }
+        { id: '1', full_name: 'John Doe', employee_id: 'TC001', ic_number: '880123-10-1234', primary_role: 'teacher' },
+        { id: '2', full_name: 'Jane Smith', employee_id: 'ST001', ic_number: '900456-08-5678', primary_role: 'staff' },
+        { id: '3', full_name: 'Bob Johnson', employee_id: 'SD001', ic_number: '050789-12-9012', primary_role: 'student' },
+        { id: '4', full_name: 'Alice Brown', employee_id: 'TC002', ic_number: '920345-06-3456', primary_role: 'teacher' }
       ]
       
       const mockLeaveTypesData = [
@@ -171,26 +176,44 @@ export default function LeaveBalancesPage() {
         { id: '4', name: 'Study Leave', max_days: 10, color: 'green', icon: '📚' }
       ]
 
-      mockUsers.forEach(user => {
-        mockLeaveTypesData.forEach(leaveType => {
-          const used = Math.floor(Math.random() * (leaveType.max_days * 0.7))
-          const carried = Math.floor(Math.random() * 5)
-          const allocated = leaveType.max_days + carried
-          
-          mockBalances.push({
-            id: `${user.id}-${leaveType.id}-${currentYear}`,
-            user_id: user.id,
-            leave_type_id: leaveType.id,
-            allocated_days: allocated,
-            used_days: used,
-            remaining_days: allocated - used,
-            carried_forward: carried,
-            year: currentYear,
-            user: user,
-            leave_type: leaveType
+        mockUsers.forEach(user => {
+          mockLeaveTypesData.forEach(leaveType => {
+            // Simulate realistic used days based on user and leave type
+            let used = 0
+            switch (leaveType.name) {
+              case 'Annual Leave':
+                used = Math.floor(Math.random() * 12) + 3 // 3-15 days used
+                break
+              case 'Sick Leave':
+                used = Math.floor(Math.random() * 8) + 1 // 1-8 days used
+                break
+              case 'Emergency Leave':
+                used = Math.floor(Math.random() * 3) // 0-3 days used
+                break
+              case 'Study Leave':
+                used = Math.floor(Math.random() * 5) + 1 // 1-5 days used
+                break
+              default:
+                used = Math.floor(Math.random() * (leaveType.max_days * 0.5))
+            }
+            
+            const carried = Math.floor(Math.random() * 5)
+            const allocated = leaveType.max_days + carried
+            
+            mockBalances.push({
+              id: `${user.id}-${leaveType.id}-${currentYear}`,
+              user_id: user.id,
+              leave_type_id: leaveType.id,
+              allocated_days: allocated,
+              used_days: used,
+              remaining_days: allocated - used,
+              carried_forward: carried,
+              year: currentYear,
+              user: user,
+              leave_type: leaveType
+            })
           })
         })
-      })
       
       setBalances(mockBalances)
     } catch (error) {
@@ -288,6 +311,53 @@ export default function LeaveBalancesPage() {
       carried_forward: balance.carried_forward
     })
     setIsEditModalOpen(true)
+  }
+
+  const openDetailsModal = (balance: LeaveBalance) => {
+    setSelectedBalance(balance)
+    setSelectedUser(balance.user || null)
+    setIsDetailsModalOpen(true)
+  }
+
+  const openHistoryModal = async (user: User) => {
+    setSelectedUser(user)
+    setIsHistoryModalOpen(true)
+    
+    // Mock leave history data - in real implementation, fetch from /api/leave-history/:userId
+    const mockHistory = [
+      {
+        id: '1',
+        leave_type: 'Annual Leave',
+        start_date: '2024-03-15',
+        end_date: '2024-03-18',
+        days: 4,
+        status: 'approved',
+        applied_date: '2024-03-01',
+        reason: 'Family vacation'
+      },
+      {
+        id: '2',
+        leave_type: 'Sick Leave',
+        start_date: '2024-02-20',
+        end_date: '2024-02-21',
+        days: 2,
+        status: 'approved',
+        applied_date: '2024-02-19',
+        reason: 'Medical appointment'
+      },
+      {
+        id: '3',
+        leave_type: 'Emergency Leave',
+        start_date: '2024-01-10',
+        end_date: '2024-01-10',
+        days: 1,
+        status: 'approved',
+        applied_date: '2024-01-09',
+        reason: 'Family emergency'
+      }
+    ]
+    
+    setLeaveHistory(mockHistory)
   }
 
   const getColorClass = (color: string) => {
@@ -453,13 +523,18 @@ export default function LeaveBalancesPage() {
                               {balance.user?.primary_role}
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-4 flex-wrap">
                             <Badge className={getColorClass(balance.leave_type?.color || 'gray')}>
                               {balance.leave_type?.icon} {balance.leave_type?.name}
                             </Badge>
                             <div className="text-sm text-gray-600 dark:text-gray-400">
-                              {balance.user?.employee_id}
+                              ID: {balance.user?.employee_id}
                             </div>
+                            {balance.user?.ic_number && (
+                              <div className="text-sm text-gray-600 dark:text-gray-400">
+                                IC: {balance.user.ic_number}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -475,14 +550,35 @@ export default function LeaveBalancesPage() {
                           </div>
                         </div>
                         
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => openEditModal(balance)}
-                          className="p-2"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => openDetailsModal(balance)}
+                            className="p-2"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => balance.user && openHistoryModal(balance.user)}
+                            className="p-2"
+                            title="View Leave History"
+                          >
+                            <History className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => openEditModal(balance)}
+                            className="p-2"
+                            title="Edit Balance"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -633,6 +729,202 @@ export default function LeaveBalancesPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Details Modal */}
+      <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Leave Balance Details</DialogTitle>
+          </DialogHeader>
+          {selectedBalance && selectedUser && (
+            <div className="space-y-4">
+              <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg">
+                <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-xl mx-auto mb-3">
+                  {selectedUser.full_name.charAt(0)}
+                </div>
+                <div className="font-medium text-gray-900 dark:text-white text-lg">
+                  {selectedUser.full_name}
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  {selectedUser.primary_role} • {selectedUser.department}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Employee ID</div>
+                  <div className="text-sm text-gray-900 dark:text-white font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                    {selectedUser.employee_id}
+                  </div>
+                </div>
+                {selectedUser.ic_number && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300">IC Number</div>
+                    <div className="text-sm text-gray-900 dark:text-white font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                      {selectedUser.ic_number}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t pt-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm`}>
+                    {selectedBalance.leave_type?.icon}
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      {selectedBalance.leave_type?.name}
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      Year {selectedBalance.year}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                      {selectedBalance.allocated_days}
+                    </div>
+                    <div className="text-xs text-blue-700 dark:text-blue-300">Allocated</div>
+                  </div>
+                  <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
+                    <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                      {selectedBalance.used_days}
+                    </div>
+                    <div className="text-xs text-red-700 dark:text-red-300">Used</div>
+                  </div>
+                  <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                      {selectedBalance.remaining_days}
+                    </div>
+                    <div className="text-xs text-green-700 dark:text-green-300">Remaining</div>
+                  </div>
+                </div>
+
+                {selectedBalance.carried_forward > 0 && (
+                  <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                    <div className="text-sm text-amber-800 dark:text-amber-200">
+                      <strong>Carried Forward:</strong> {selectedBalance.carried_forward} days from previous year
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  onClick={() => selectedUser && openHistoryModal(selectedUser)} 
+                  variant="outline" 
+                  className="flex-1"
+                >
+                  <History className="w-4 h-4 mr-2" />
+                  View History
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsDetailsModalOpen(false)} 
+                  className="flex-1"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Leave History Modal */}
+      <Dialog open={isHistoryModalOpen} onOpenChange={setIsHistoryModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Leave History</DialogTitle>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+                  {selectedUser.full_name.charAt(0)}
+                </div>
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-white">
+                    {selectedUser.full_name}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    {selectedUser.employee_id} {selectedUser.ic_number && `• ${selectedUser.ic_number}`}
+                  </div>
+                </div>
+              </div>
+
+              <div className="max-h-96 overflow-y-auto">
+                {leaveHistory.length === 0 ? (
+                  <div className="text-center py-8">
+                    <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p className="text-gray-500 dark:text-gray-400">No leave history found</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {leaveHistory.map((record) => (
+                      <div key={record.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              className={record.status === 'approved' ? 'bg-green-100 text-green-800' : 
+                                       record.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                                       'bg-red-100 text-red-800'}
+                            >
+                              {record.leave_type}
+                            </Badge>
+                            <Badge variant="outline">
+                              {record.days} {record.days === 1 ? 'day' : 'days'}
+                            </Badge>
+                          </div>
+                          <Badge 
+                            variant="outline"
+                            className={record.status === 'approved' ? 'border-green-200 text-green-700' : 
+                                     record.status === 'pending' ? 'border-yellow-200 text-yellow-700' : 
+                                     'border-red-200 text-red-700'}
+                          >
+                            {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+                          </Badge>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <div className="text-gray-600 dark:text-gray-400">Leave Period</div>
+                            <div className="font-medium text-gray-900 dark:text-white">
+                              {new Date(record.start_date).toLocaleDateString()} - {new Date(record.end_date).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-gray-600 dark:text-gray-400">Applied On</div>
+                            <div className="font-medium text-gray-900 dark:text-white">
+                              {new Date(record.applied_date).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {record.reason && (
+                          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                            <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Reason</div>
+                            <div className="text-sm text-gray-900 dark:text-white">{record.reason}</div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-4">
+                <Button variant="outline" onClick={() => setIsHistoryModalOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </DashboardLayout>

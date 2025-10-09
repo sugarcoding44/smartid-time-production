@@ -44,9 +44,10 @@ export async function GET(request: NextRequest) {
     console.log(`📊 Fetching attendance for ${userId || employeeId} from ${startOfMonth.toISOString().split('T')[0]} to ${endOfMonth.toISOString().split('T')[0]}`)
 
     // Try to get attendance records from attendance_records table
+    // Use only columns that exist in the actual schema
     let attendanceQuery = serviceSupabase
       .from('attendance_records')
-      .select('id, date, clock_in, clock_out, status, total_hours')
+      .select('id, date, check_in_time, check_out_time, status, actual_working_hours, overtime_hours')
       .gte('date', startOfMonth.toISOString().split('T')[0])
       .lte('date', endOfMonth.toISOString().split('T')[0])
 
@@ -126,9 +127,9 @@ function processAttendanceRecords(records: any[]) {
     recent_records: records.slice(-5).map(r => ({
       date: r.date,
       status: r.status,
-      clock_in: r.clock_in,
-      clock_out: r.clock_out,
-      total_hours: r.total_hours
+      clock_in: r.check_in_time,
+      clock_out: r.check_out_time,
+      total_hours: (r.actual_working_hours || 0) + (r.overtime_hours || 0)
     }))
   }
 }

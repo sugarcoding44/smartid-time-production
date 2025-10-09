@@ -34,215 +34,153 @@ export default function SmartIDCardPage() {
       <Header />
       
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-cyan-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800"></div>
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-blue-200 dark:bg-blue-900/30 rounded-full mix-blend-multiply dark:mix-blend-normal filter blur-xl opacity-40 animate-pulse"></div>
-          <div className="absolute top-40 right-10 w-72 h-72 bg-indigo-200 dark:bg-indigo-900/30 rounded-full mix-blend-multiply dark:mix-blend-normal filter blur-xl opacity-40 animate-pulse animation-delay-1000"></div>
-        </div>
+      <section className="relative pt-32 pb-16">
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-600 opacity-10"></div>
         
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            {/* Left Content */}
-            <div className="space-y-8">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="relative">
-                  <div className="w-20 h-20 bg-gradient-to-br from-blue-500 via-indigo-500 to-cyan-600 rounded-3xl flex items-center justify-center shadow-2xl">
-                    <CreditCard className="w-10 h-10 text-white" />
-                  </div>
-                  <div className="absolute -top-2 -right-2">
-                    <div className="w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center">
-                      <Sparkles className="w-3 h-3 text-white" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="space-y-6">
-                <h1 className="text-5xl md:text-6xl font-bold leading-tight">
-                  <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 dark:from-blue-300 dark:via-indigo-300 dark:to-cyan-300 bg-clip-text text-transparent">
-                    smartID Card
-                  </span>
-                </h1>
-                
-                <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 leading-relaxed">
-                  Complete NFC smart card ecosystem with 
-                  <span className="font-semibold text-blue-600 dark:text-blue-400"> professional card printing</span> and 
-                  <span className="font-semibold text-indigo-600 dark:text-indigo-400"> secure payment integration</span>.
-                </p>
-              </div>
-              
-              <div className="flex flex-wrap gap-4 mb-8">
-                <Badge variant="secondary" className="px-4 py-2 text-sm bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                  <Shield className="w-4 h-4 mr-2" />
-                  NFC Technology
-                </Badge>
-                <Badge variant="secondary" className="px-4 py-2 text-sm bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300">
-                  <Printer className="w-4 h-4 mr-2" />
-                  Professional Printing
-                </Badge>
-                <Badge variant="secondary" className="px-4 py-2 text-sm bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300">
-                  <Lock className="w-4 h-4 mr-2" />
-                  Bank-Grade Security
-                </Badge>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" className="bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-600 hover:from-blue-600 hover:via-indigo-600 hover:to-cyan-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 px-8 py-4">
-                  <ArrowRight className="w-5 h-5 mr-2" />
-                  Order Complete Package - RM 4,999
-                </Button>
-                <Button size="lg" variant="outline" className="border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-600 hover:text-white dark:border-indigo-400 dark:text-indigo-400 px-8 py-4">
-                  <PlayCircle className="w-5 h-5 mr-2" />
-                  Watch Demo
-                </Button>
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center space-y-8">
+            <div className="flex justify-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <CreditCard className="w-8 h-8 text-white" />
               </div>
             </div>
             
-            {/* Right Visual */}
-            <div className="relative">
-              <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-3xl border border-blue-200/30 dark:border-blue-600/30 shadow-2xl overflow-hidden p-8">
-                <div className="text-center space-y-6">
-                  <div className="w-32 h-32 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl mx-auto flex items-center justify-center shadow-2xl">
-                    <CreditCard className="w-16 h-16 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">NFC Smart Cards</h3>
-                    <p className="text-gray-600 dark:text-gray-300">Tap for instant transactions</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 text-center">
-                    <div className="bg-blue-100 dark:bg-blue-900/30 p-4 rounded-xl">
-                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">13.56MHz</div>
-                      <div className="text-xs text-blue-700 dark:text-blue-300">NFC Frequency</div>
-                    </div>
-                    <div className="bg-indigo-100 dark:bg-indigo-900/30 p-4 rounded-xl">
-                      <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">4cm</div>
-                      <div className="text-xs text-indigo-700 dark:text-indigo-300">Read Distance</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="space-y-6">
+              <h1 className="text-4xl md:text-5xl font-bold leading-tight text-gray-900 dark:text-white">
+                smartID Card Solutions
+              </h1>
+              
+              <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+                Professional NFC smart card printing and management system for schools and institutions
+              </p>
+            </div>
+            
+            <div className="flex flex-wrap justify-center gap-3 mb-8">
+              <Badge variant="secondary" className="px-3 py-1 bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300">
+                NFC Technology
+              </Badge>
+              <Badge variant="secondary" className="px-3 py-1 bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                Professional Printing
+              </Badge>
+              <Badge variant="secondary" className="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                Secure System
+              </Badge>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button size="lg" className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-3">
+                <ArrowRight className="w-5 h-5 mr-2" />
+                Get Complete Package - RM 4,999
+              </Button>
+              <Button size="lg" variant="outline" className="border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-600 hover:text-white px-8 py-3">
+                <PlayCircle className="w-5 h-5 mr-2" />
+                Watch Demo
+              </Button>
             </div>
           </div>
         </div>
       </section>
 
       {/* Package Components Section */}
-      <section className="py-20 bg-white dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
-              Complete Card
-              <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 bg-clip-text text-transparent"> Package</span>
+      <section className="py-16 bg-gray-50 dark:bg-gray-800">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              What's Included
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-              Everything you need for a complete smart card system - from professional printing to secure payment processing.
+            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+              Complete smart card system with everything you need to get started
             </p>
           </div>
           
-          <div className="grid lg:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-6">
             {/* NFC Smart Cards */}
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white dark:bg-gray-800">
-              <CardHeader className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <CreditCard className="w-8 h-8 text-white" />
+            <Card className="bg-white dark:bg-gray-700 shadow-md hover:shadow-lg transition-shadow">
+              <CardHeader className="text-center pb-4">
+                <div className="w-12 h-12 bg-indigo-600 rounded-lg flex items-center justify-center mx-auto mb-3">
+                  <CreditCard className="w-6 h-6 text-white" />
                 </div>
-                <CardTitle className="text-2xl">NFC Smart Cards</CardTitle>
-                <CardDescription className="text-lg">High-quality RFID cards with NFC chip</CardDescription>
+                <CardTitle className="text-xl text-gray-900 dark:text-white">NFC Smart Cards</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <ul className="space-y-3">
-                  <li className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-blue-500" />
-                    <span>ISO 14443 Type A compliant</span>
+              <CardContent className="pt-0">
+                <div className="text-center mb-4">
+                  <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">RM 3.50/card</p>
+                  <p className="text-sm text-gray-500">Min. 100 cards</p>
+                </div>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-indigo-500" />
+                    <span>ISO 14443 compliant</span>
                   </li>
-                  <li className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-blue-500" />
-                    <span>1KB EEPROM memory</span>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-indigo-500" />
+                    <span>1KB memory</span>
                   </li>
-                  <li className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-blue-500" />
-                    <span>10-year lifespan guarantee</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-blue-500" />
-                    <span>Water & scratch resistant</span>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-indigo-500" />
+                    <span>10-year lifespan</span>
                   </li>
                 </ul>
-                <div className="pt-4 border-t">
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">RM 3.50/card</p>
-                  <p className="text-sm text-gray-500">Minimum order: 100 cards</p>
-                </div>
               </CardContent>
             </Card>
 
             {/* Card Printer */}
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white dark:bg-gray-800">
-              <CardHeader className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-cyan-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Printer className="w-8 h-8 text-white" />
+            <Card className="bg-white dark:bg-gray-700 shadow-md hover:shadow-lg transition-shadow">
+              <CardHeader className="text-center pb-4">
+                <div className="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center mx-auto mb-3">
+                  <Printer className="w-6 h-6 text-white" />
                 </div>
-                <CardTitle className="text-2xl">Professional Printer</CardTitle>
-                <CardDescription className="text-lg">High-resolution ID card printer</CardDescription>
+                <CardTitle className="text-xl text-gray-900 dark:text-white">Professional Printer</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <ul className="space-y-3">
-                  <li className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-indigo-500" />
-                    <span>300 DPI print resolution</span>
+              <CardContent className="pt-0">
+                <div className="text-center mb-4">
+                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">RM 3,999</p>
+                  <p className="text-sm text-gray-500">2-year warranty</p>
+                </div>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-purple-500" />
+                    <span>300 DPI resolution</span>
                   </li>
-                  <li className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-indigo-500" />
-                    <span>Full-color dye sublimation</span>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-purple-500" />
+                    <span>Full-color printing</span>
                   </li>
-                  <li className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-indigo-500" />
-                    <span>200-card input hopper</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-indigo-500" />
-                    <span>USB & Ethernet connectivity</span>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-purple-500" />
+                    <span>USB & Ethernet</span>
                   </li>
                 </ul>
-                <div className="pt-4 border-t">
-                  <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">RM 3,999</p>
-                  <p className="text-sm text-gray-500">Includes 2-year warranty</p>
-                </div>
               </CardContent>
             </Card>
 
             {/* Software Integration */}
-            <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white dark:bg-gray-800">
-              <CardHeader className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Monitor className="w-8 h-8 text-white" />
+            <Card className="bg-white dark:bg-gray-700 shadow-md hover:shadow-lg transition-shadow">
+              <CardHeader className="text-center pb-4">
+                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-3">
+                  <Monitor className="w-6 h-6 text-white" />
                 </div>
-                <CardTitle className="text-2xl">Software Suite</CardTitle>
-                <CardDescription className="text-lg">Card design & management software</CardDescription>
+                <CardTitle className="text-xl text-gray-900 dark:text-white">Software Suite</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <ul className="space-y-3">
-                  <li className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-cyan-500" />
-                    <span>Drag-and-drop card designer</span>
+              <CardContent className="pt-0">
+                <div className="text-center mb-4">
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">RM 999</p>
+                  <p className="text-sm text-gray-500">One-time license</p>
+                </div>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-blue-500" />
+                    <span>Card designer</span>
                   </li>
-                  <li className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-cyan-500" />
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-blue-500" />
                     <span>Database integration</span>
                   </li>
-                  <li className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-cyan-500" />
-                    <span>Batch printing capability</span>
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-cyan-500" />
-                    <span>Template library included</span>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-blue-500" />
+                    <span>Batch printing</span>
                   </li>
                 </ul>
-                <div className="pt-4 border-t">
-                  <p className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">RM 999</p>
-                  <p className="text-sm text-gray-500">One-time license fee</p>
-                </div>
               </CardContent>
             </Card>
           </div>

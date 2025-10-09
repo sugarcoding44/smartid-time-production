@@ -37,7 +37,6 @@ export async function POST(request: NextRequest) {
 
     // Use server-side Supabase client for authentication
     const supabase = await createClient()
-    
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     console.log('🔐 Auth check result:', {
@@ -86,7 +85,7 @@ export async function POST(request: NextRequest) {
     if (userError || !userData) {
       console.error('❌ User not found in database:', userError)
       return NextResponse.json(
-        { error: 'User not found in database', details: userError?.message },
+        { error: 'User not found in database', details: userError?.message || 'No row in users for current auth user. Complete registration first.' },
         { status: 404 }
       )
     }
@@ -128,11 +127,16 @@ export async function POST(request: NextRequest) {
       longitude: parseFloat(longitude),
       attendance_radius: attendanceRadius || 300,
       is_attendance_enabled: true,
+      requires_approval_outside_radius: true,
+      operating_hours: { start: '08:00', end: '17:00' },
+      working_days: [1, 2, 3, 4, 5],
+      timezone: 'Asia/Kuala_Lumpur',
+      break_times: { lunch: { start: '12:00', end: '13:00' } },
       is_primary: true,
       is_active: true,
       location_status: 'verified',
-      created_by: userData.id,
-      notes: 'Location set during initial institution setup'
+      notes: 'Location set during initial institution setup',
+      created_by: userData.id
     }
 
     if (existingLocation) {
@@ -148,7 +152,7 @@ export async function POST(request: NextRequest) {
       if (updateError) {
         console.error('Error updating location:', updateError)
         return NextResponse.json(
-          { error: 'Failed to update location' },
+          { error: 'Failed to update location', details: updateError.message },
           { status: 500 }
         )
       }
@@ -163,14 +167,14 @@ export async function POST(request: NextRequest) {
       console.log('✨ Creating new location for institution:', userData.institution_id)
       const { data: newLocation, error: insertError } = await serviceSupabase
         .from('institution_locations')
-        .insert([locationData])
+        .upsert([locationData], { onConflict: 'institution_id,name' })
         .select()
         .single()
 
       if (insertError) {
         console.error('Error creating location:', insertError)
         return NextResponse.json(
-          { error: 'Failed to create location' },
+          { error: 'Failed to create location', details: insertError.message },
           { status: 500 }
         )
       }

@@ -1,6 +1,9 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const PUBLIC_PATHS = ['/', '/auth/signin', '/auth/signup', '/auth/callback', '/auth/confirm-email']
+const API_PATHS = ['/api/']
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
     request: {
@@ -8,9 +11,17 @@ export async function middleware(request: NextRequest) {
     },
   })
 
-  // ALWAYS allow home page to pass through - NO AUTHENTICATION CHECK
-  if (request.nextUrl.pathname === '/') {
-    console.log('🏠 Home page - allowing through without auth check')
+  const { pathname } = request.nextUrl
+
+  // Allow public paths and Next.js internals without auth
+  if (PUBLIC_PATHS.includes(pathname) || 
+      pathname.startsWith('/_next') || 
+      pathname === '/favicon.ico') {
+    return response
+  }
+
+  // Allow API routes without auth check
+  if (API_PATHS.some(path => pathname.startsWith(path))) {
     return response
   }
 
@@ -46,66 +57,52 @@ export async function middleware(request: NextRequest) {
     userEmail: user?.email
   })
 
-  // Protected routes - temporarily exclude setup-location to prevent callback redirect issues
-  const protectedRoutes = ['/dashboard']
-  const isProtectedRoute = protectedRoutes.some(route => request.nextUrl.pathname.startsWith(route))
-  
-  if (isProtectedRoute) {
+  // All routes except auth and home require authentication
+  const isAuthPage = request.nextUrl.pathname.startsWith('/auth')
+  const isHome = request.nextUrl.pathname === '/'
+  const isSetupLocation = request.nextUrl.pathname.startsWith('/setup-location')
+
+  if (!isAuthPage && !isHome) {
     if (!user) {
-      console.log('😫 Redirecting to signin - no user for protected route')
+      console.log('😫 Redirecting to signin - no user for protected route:', request.nextUrl.pathname)
       return NextResponse.redirect(new URL('/auth/signin', request.url))
     }
   }
-  
-  // Special handling for setup-location - allow if user exists OR if coming from callback
-  if (request.nextUrl.pathname.startsWith('/setup-location')) {
-    if (!user) {
-      const referer = request.headers.get('referer')
-      const isFromCallback = referer && referer.includes('/auth/callback')
-      
-      if (!isFromCallback) {
-        console.log('😫 Redirecting to signin - no user for setup-location and not from callback')
-        return NextResponse.redirect(new URL('/auth/signin', request.url))
-      } else {
-        console.log('🔄 Allowing setup-location access from callback without full auth')
+
+  // If authenticated, enforce location-setup globally (except on auth and setup-location pages)
+  if (user && !isAuthPage) {
+    try {
+      const { data: userRecord } = await supabase
+        .from('users')
+        .select('institution_id')
+        .eq('auth_user_id', user.id)
+        .single()
+
+      if (userRecord?.institution_id) {
+        const { data: locationExists, error: locErr } = await supabase
+          .from('institution_locations')
+          .select('id')
+          .eq('institution_id', userRecord.institution_id)
+          .limit(1)
+          .maybeSingle()
+
+        if (!locationExists && !isSetupLocation) {
+          console.log('🔄 User needs location setup - redirecting to /setup-location')
+          return NextResponse.redirect(new URL('/setup-location', request.url))
+        }
+        // If location exists and user visits /setup-location, send to dashboard instead
+        if (locationExists && isSetupLocation) {
+          return NextResponse.redirect(new URL('/dashboard', request.url))
+        }
       }
+    } catch (error) {
+      console.log('⚠️ Error enforcing setup status:', error)
     }
   }
 
-  // Redirect authenticated users away from auth pages - but check setup status first
-  if (request.nextUrl.pathname.startsWith('/auth') && user) {
-    if (request.nextUrl.pathname !== '/auth/callback') {
-      // Check if user needs to complete setup (location)
-      try {
-        const { data: userRecord } = await supabase
-          .from('users')
-          .select('institution_id')
-          .eq('auth_user_id', user.id)
-          .single()
-        
-        if (userRecord?.institution_id) {
-          // Check if institution has location setup
-          const { data: locationExists } = await supabase
-            .from('institution_locations')
-            .select('id')
-            .eq('institution_id', userRecord.institution_id)
-            .limit(1)
-            .single()
-          
-          if (!locationExists) {
-            console.log('🔄 User authenticated but needs location setup - redirecting to setup-location')
-            return NextResponse.redirect(new URL('/setup-location', request.url))
-          }
-        } else {
-          console.log('⚠️ User authenticated but no user record found - may need account setup')
-        }
-      } catch (error) {
-        console.log('⚠️ Error checking setup status:', error)
-      }
-      
-      console.log('🔄 Redirecting authenticated user to dashboard')
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
+  // Redirect authenticated users away from auth pages
+  if (isAuthPage && user && request.nextUrl.pathname !== '/auth/callback') {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
   return response
@@ -113,13 +110,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
-     */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Run middleware on everything except Next internals, images, favicon, and API routes
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

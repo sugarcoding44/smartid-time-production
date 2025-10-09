@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
-import { FileText, AlertTriangle, CheckCircle, XCircle, Check, Grid3X3, List } from 'lucide-react'
+import { FileText, AlertTriangle, CheckCircle, XCircle, Check, Grid3X3, List, Users, Calendar, TrendingDown, Eye, BarChart3, Clock, User } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 type LeaveRequest = {
   id: string
@@ -34,6 +35,13 @@ type LeaveRequest = {
   reviewed_by?: string
   reviewed_date?: string
   notes?: string
+  medical_certificate_url?: string
+  attachments?: Array<{
+    fileName?: string
+    fileUrl?: string
+    fileType?: string
+    uploadedAt?: string
+  }> | string
 }
 
 type LeaveType = {
@@ -54,6 +62,11 @@ export default function LeaveManagementPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const [currentlyOnLeave, setCurrentlyOnLeave] = useState<any[]>([])
+  const [userQuotas, setUserQuotas] = useState<any[]>([])
+  const [showQuotaModal, setShowQuotaModal] = useState(false)
+  const [selectedUserQuota, setSelectedUserQuota] = useState<any>(null)
+  const [activeTab, setActiveTab] = useState('requests') // requests, on-leave, quotas
 
   useEffect(() => {
     initializeData()
@@ -67,32 +80,30 @@ export default function LeaveManagementPage() {
     try {
       setLoading(true)
       
-      // Get current user info from debug endpoint
-      const debugResponse = await fetch('/api/debug/supabase')
-      const debugData = await debugResponse.json()
+      // Get current user from Supabase auth
+      const supabase = createClient()
+      const { data: { user: authUser } } = await supabase.auth.getUser()
       
-      // Get the actual authenticated user ID
-      const authTest = debugData.tests.find((t: any) => t.name === 'Auth Session')
-      const currentAuthUserId = authTest?.data?.userId
-      
-      if (!currentAuthUserId) {
-        toast.error('Authentication required')
+      if (!authUser) {
+        toast.error('Please sign in to view leave management')
         return
       }
       
-      // Find the actual current user from service test data
-      const serviceTest = debugData.tests.find((t: any) => t.name === 'Service Role Client')
-      const allUsers = serviceTest?.data || []
+      // Get user profile data
+      const { data: currentUser } = await supabase
+        .from('users')
+        .select('*')
+        .or(`auth_user_id.eq.${authUser.id},id.eq.${authUser.id}`)
+        .single()
       
-      let user = allUsers.find((u: any) => u.auth_user_id === currentAuthUserId)
-      if (!user) {
-        user = allUsers.find((u: any) => u.id === currentAuthUserId)
-      }
-      
-      if (user) {
-        setCurrentUser(user)
-        await loadLeaveRequests(user.institution_id)
-        await loadLeaveTypes(user.institution_id)
+      if (currentUser && currentUser.institution_id) {
+        setCurrentUser(currentUser)
+        await loadLeaveRequests(currentUser.institution_id)
+        await loadLeaveTypes(currentUser.institution_id)
+        await loadCurrentlyOnLeave(currentUser.institution_id)
+        await loadUserQuotas(currentUser.institution_id)
+      } else if (currentUser) {
+        toast.error('Institution not found. Please contact administrator.')
       }
     } catch (error) {
       console.error('Error initializing leave management data:', error)
@@ -104,76 +115,21 @@ export default function LeaveManagementPage() {
 
   const loadLeaveRequests = async (institutionId: string) => {
     try {
-      // Mock leave requests data - in real implementation, fetch from /api/leave-requests
-      const mockRequests: LeaveRequest[] = [
-        {
-          id: '1',
-          user_id: '1',
-          user: {
-            full_name: 'John Doe',
-            employee_id: 'TC001',
-            primary_role: 'teacher'
-          },
-          leave_type_id: '1',
-          leave_type: {
-            name: 'Annual Leave',
-            color: 'blue'
-          },
-          start_date: '2024-02-15',
-          end_date: '2024-02-19',
-          days_count: 5,
-          reason: 'Family vacation planned for Chinese New Year',
-          status: 'pending',
-          applied_date: '2024-01-20T10:30:00Z'
-        },
-        {
-          id: '2',
-          user_id: '2',
-          user: {
-            full_name: 'Jane Smith',
-            employee_id: 'ST001',
-            primary_role: 'staff'
-          },
-          leave_type_id: '2',
-          leave_type: {
-            name: 'Sick Leave',
-            color: 'red'
-          },
-          start_date: '2024-01-25',
-          end_date: '2024-01-26',
-          days_count: 2,
-          reason: 'Flu symptoms and doctor consultation required',
-          status: 'approved',
-          applied_date: '2024-01-24T08:15:00Z',
-          reviewed_by: 'Admin User',
-          reviewed_date: '2024-01-24T14:30:00Z'
-        },
-        {
-          id: '3',
-          user_id: '3',
-          user: {
-            full_name: 'Alice Brown',
-            employee_id: 'TC002',
-            primary_role: 'teacher'
-          },
-          leave_type_id: '3',
-          leave_type: {
-            name: 'Emergency Leave',
-            color: 'orange'
-          },
-          start_date: '2024-01-30',
-          end_date: '2024-01-30',
-          days_count: 1,
-          reason: 'Family emergency requiring immediate attention',
-          status: 'rejected',
-          applied_date: '2024-01-29T16:45:00Z',
-          reviewed_by: 'Admin User',
-          reviewed_date: '2024-01-30T09:00:00Z',
-          notes: 'Insufficient documentation provided'
-        }
-      ]
+      // Fetch real leave requests from Supabase API
+      const response = await fetch(`/api/leave/requests?institutionId=${institutionId}`)
+      const result = await response.json()
       
-      setLeaveRequests(mockRequests)
+      if (result.success) {
+        setLeaveRequests(result.data || [])
+      } else {
+        console.error('Failed to load leave requests:', result.error)
+        if (result.message?.includes('table not found')) {
+          toast.warning('Leave management system not set up yet')
+          setLeaveRequests([]) // Show empty state
+        } else {
+          toast.error('Failed to load leave requests')
+        }
+      }
     } catch (error) {
       console.error('Error loading leave requests:', error)
       toast.error('Failed to load leave requests')
@@ -182,42 +138,65 @@ export default function LeaveManagementPage() {
 
   const loadLeaveTypes = async (institutionId: string) => {
     try {
-      // Mock leave types data - in real implementation, fetch from /api/leave-types
-      const mockLeaveTypes: LeaveType[] = [
-        {
-          id: '1',
-          name: 'Annual Leave',
-          max_days: 21,
-          carry_forward: true,
-          color: 'blue'
-        },
-        {
-          id: '2',
-          name: 'Sick Leave',
-          max_days: 14,
-          carry_forward: false,
-          color: 'red'
-        },
-        {
-          id: '3',
-          name: 'Emergency Leave',
-          max_days: 5,
-          carry_forward: false,
-          color: 'orange'
-        },
-        {
-          id: '4',
-          name: 'Maternity Leave',
-          max_days: 90,
-          carry_forward: false,
-          color: 'purple'
-        }
-      ]
+      // Fetch real leave types from Supabase API
+      const response = await fetch(`/api/leave-types?institution_id=${institutionId}`)
+      const result = await response.json()
       
-      setLeaveTypes(mockLeaveTypes)
+      if (result.success) {
+        const transformedTypes = result.data.map((type: any) => ({
+          id: type.id,
+          name: type.name,
+          max_days: type.default_quota_days || 0,
+          carry_forward: type.allow_carry_forward || false,
+          color: type.color || 'blue'
+        }))
+        setLeaveTypes(transformedTypes)
+      } else {
+        console.error('Failed to load leave types:', result.error)
+        toast.error('Failed to load leave types')
+      }
     } catch (error) {
       console.error('Error loading leave types:', error)
       toast.error('Failed to load leave types')
+    }
+  }
+
+  const loadCurrentlyOnLeave = async (institutionId: string) => {
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      const response = await fetch(`/api/leave/currently-on-leave?institutionId=${institutionId}&date=${today}`)
+      const result = await response.json()
+      
+      if (result.success) {
+        setCurrentlyOnLeave(result.data || [])
+        if (result.message) {
+          console.log('Currently on leave info:', result.message)
+        }
+      } else {
+        console.error('Failed to load currently on leave:', result.error)
+        // Don't show toast error for missing tables - it's expected for new installations
+        if (!result.error?.includes('schema cache') && !result.error?.includes('not set up yet')) {
+          toast.error('Failed to load currently on leave data')
+        }
+        setCurrentlyOnLeave([]) // Set empty array on error
+      }
+    } catch (error) {
+      console.error('Error loading currently on leave:', error)
+    }
+  }
+
+  const loadUserQuotas = async (institutionId: string) => {
+    try {
+      const response = await fetch(`/api/leave/user-quotas?institutionId=${institutionId}`)
+      const result = await response.json()
+      
+      if (result.success) {
+        setUserQuotas(result.data || [])
+      } else {
+        console.error('Failed to load user quotas:', result.error)
+      }
+    } catch (error) {
+      console.error('Error loading user quotas:', error)
     }
   }
 
@@ -241,20 +220,35 @@ export default function LeaveManagementPage() {
 
   const handleApproveRequest = async (requestId: string) => {
     try {
-      // Mock approve - in real implementation, call /api/leave-requests/:id/approve
-      const updatedRequests = leaveRequests.map(request =>
-        request.id === requestId
-          ? {
-              ...request,
-              status: 'approved' as const,
-              reviewed_by: currentUser?.name || 'Admin User',
-              reviewed_date: new Date().toISOString()
-            }
-          : request
-      )
+      // Call real API to approve leave request
+      const response = await fetch(`/api/leave/requests?id=${requestId}&action=approve`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
+      })
       
-      setLeaveRequests(updatedRequests)
-      toast.success('Leave request approved successfully')
+      const result = await response.json()
+      
+      if (result.success) {
+        // Update local state
+        const updatedRequests = leaveRequests.map(request =>
+          request.id === requestId
+            ? {
+                ...request,
+                status: 'approved' as const,
+                reviewed_by: currentUser?.full_name || 'Admin User',
+                reviewed_date: new Date().toISOString()
+              }
+            : request
+        )
+        
+        setLeaveRequests(updatedRequests)
+        toast.success('Leave request approved successfully')
+      } else {
+        toast.error('Failed to approve leave request: ' + result.error)
+      }
     } catch (error) {
       console.error('Error approving leave request:', error)
       toast.error('Failed to approve leave request')
@@ -263,21 +257,36 @@ export default function LeaveManagementPage() {
 
   const handleRejectRequest = async (requestId: string, notes?: string) => {
     try {
-      // Mock reject - in real implementation, call /api/leave-requests/:id/reject
-      const updatedRequests = leaveRequests.map(request =>
-        request.id === requestId
-          ? {
-              ...request,
-              status: 'rejected' as const,
-              reviewed_by: currentUser?.name || 'Admin User',
-              reviewed_date: new Date().toISOString(),
-              notes: notes || 'Request rejected by administrator'
-            }
-          : request
-      )
+      // Call real API to reject leave request
+      const response = await fetch(`/api/leave/requests?id=${requestId}&action=reject`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ notes })
+      })
       
-      setLeaveRequests(updatedRequests)
-      toast.success('Leave request rejected')
+      const result = await response.json()
+      
+      if (result.success) {
+        // Update local state
+        const updatedRequests = leaveRequests.map(request =>
+          request.id === requestId
+            ? {
+                ...request,
+                status: 'rejected' as const,
+                reviewed_by: currentUser?.full_name || 'Admin User',
+                reviewed_date: new Date().toISOString(),
+                notes: notes || 'Request rejected by administrator'
+              }
+            : request
+        )
+        
+        setLeaveRequests(updatedRequests)
+        toast.success('Leave request rejected')
+      } else {
+        toast.error('Failed to reject leave request: ' + result.error)
+      }
     } catch (error) {
       console.error('Error rejecting leave request:', error)
       toast.error('Failed to reject leave request')
@@ -347,6 +356,297 @@ export default function LeaveManagementPage() {
 
   const stats = getStats()
 
+  // Tab Components
+  const LeaveRequestsTab = () => (
+    <>
+      {/* Filters */}
+      <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
+        <CardContent className="p-6">
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
+                <Input
+                  placeholder="Search by employee name, ID, or leave type..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-4">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-40">
+                  <span className="mr-2">🔽</span>
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Leave Requests */}
+      <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <span>📅</span>
+            Leave Requests
+            <Badge variant="secondary" className="ml-auto">
+              {filteredRequests.length} requests
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {filteredRequests.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">📋</div>
+                <p className="text-gray-500 dark:text-gray-400">No leave requests found</p>
+              </div>
+            ) : (
+              filteredRequests.map((request) => (
+                <div
+                  key={request.id}
+                  className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors cursor-pointer"
+                  onClick={() => openDetailModal(request)}
+                >
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+                      {request.user?.full_name.charAt(0) || 'U'}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="font-medium text-gray-900 dark:text-white">
+                          {request.user?.full_name}
+                        </div>
+                        <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 text-xs px-2 py-1 rounded-full font-medium">
+                          {request.user?.primary_role}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                        <span>ID: {request.user?.employee_id}</span>
+                        {request.user?.ic_number && (
+                          <span>IC: {request.user.ic_number}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                        <div className="flex items-center gap-1">
+                          <span>📅</span>
+                          {formatDate(request.start_date)} - {formatDate(request.end_date)}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span>⏰</span>
+                          {request.days_count} day{request.days_count !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-4">
+                    <Badge className={getLeaveTypeColor(request.leave_type?.color || 'gray')}>
+                      {request.leave_type?.name}
+                    </Badge>
+                    
+                    <Badge className={`${getStatusColor(request.status)} flex items-center gap-1`}>
+                      {getStatusIcon(request.status)}
+                      {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                    </Badge>
+                    
+                    {request.status === 'pending' && (
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleApproveRequest(request.id)
+                          }}
+                          className="bg-green-600 hover:bg-green-700 text-white px-3 py-1"
+                        >
+                          <Check className="w-4 h-4 mr-1" />
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleRejectRequest(request.id)
+                          }}
+                          className="border-red-300 dark:border-red-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-3 py-1"
+                        >
+                          <span className="mr-1">❌</span>
+                          Reject
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </>
+  )
+
+  const CurrentlyOnLeaveTab = () => (
+    <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Calendar className="w-5 h-5" />
+          Currently on Leave
+          <Badge variant="secondary" className="ml-auto">
+            {currentlyOnLeave.length} employees
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {currentlyOnLeave.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">🏠</div>
+              <p className="text-gray-500 dark:text-gray-400">No employees currently on leave</p>
+            </div>
+          ) : (
+            currentlyOnLeave.map((employee) => (
+              <div key={employee.user_id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold">
+                    {employee.user_name?.charAt(0) || 'U'}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="font-medium text-gray-900 dark:text-white">
+                        {employee.user_name}
+                      </div>
+                      <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 text-xs px-2 py-1 rounded-full font-medium">
+                        {employee.role}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                      <span>ID: {employee.employee_id}</span>
+                      {employee.ic_number && (
+                        <span>IC: {employee.ic_number}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {formatDate(employee.start_date)} - {formatDate(employee.end_date)}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {employee.days_remaining} day{employee.days_remaining !== 1 ? 's' : ''} remaining
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <Badge className={getLeaveTypeColor(employee.leave_type_color || 'gray')}>
+                    {employee.leave_type_name}
+                  </Badge>
+                  
+                  <Badge className="bg-purple-100 text-purple-800">
+                    On Leave
+                  </Badge>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+
+  const UserQuotasTab = () => (
+    <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <BarChart3 className="w-5 h-5" />
+          User Leave Quotas
+          <Badge variant="secondary" className="ml-auto">
+            {userQuotas.length} users
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {userQuotas.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">📈</div>
+              <p className="text-gray-500 dark:text-gray-400">No quota data available</p>
+            </div>
+          ) : (
+            userQuotas.map((userQuota) => (
+              <div key={userQuota.user_id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold">
+                    {userQuota.user_name?.charAt(0) || 'U'}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="font-medium text-gray-900 dark:text-white">
+                        {userQuota.user_name}
+                      </div>
+                      <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 text-xs px-2 py-1 rounded-full font-medium">
+                        {userQuota.role}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                      <span>ID: {userQuota.employee_id}</span>
+                      {userQuota.ic_number && (
+                        <span>IC: {userQuota.ic_number}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                      <div className="flex items-center gap-1">
+                        <TrendingDown className="w-3 h-3" />
+                        {userQuota.total_used || 0} days used this year
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      {userQuota.total_remaining || 0} days remaining
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      of {userQuota.total_quota || 0} allocated
+                    </div>
+                  </div>
+                  
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedUserQuota(userQuota)
+                      setShowQuotaModal(true)
+                    }}
+                    className="ml-2"
+                  >
+                    <Eye className="w-4 h-4 mr-1" />
+                    View Details
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -361,191 +661,104 @@ export default function LeaveManagementPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="bg-white dark:bg-gradient-to-br dark:from-violet-900 dark:to-purple-900 rounded-2xl p-6 border-0 shadow-lg dark:border dark:border-purple-800/50">
+        <div className="rounded-2xl p-6 border-0 shadow-lg header-card">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Leave Management 📋</h1>
-              <p className="text-gray-600 dark:text-purple-200/90">Review and manage leave requests for your institution</p>
+              <h1 className="text-3xl font-bold mb-2">Leave Management</h1>
+              <p className="opacity-90">Review and manage leave requests for your institution</p>
             </div>
             <div className="mt-4 lg:mt-0 text-center">
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.pending}</div>
-              <div className="text-sm text-gray-500 dark:text-purple-200/70">Pending Requests</div>
+              <div className="text-2xl font-bold">{stats.pending}</div>
+              <div className="text-sm opacity-70">Pending Requests</div>
             </div>
+          </div>
+          
+          {/* Navigation Tabs */}
+          <div className="mt-6 flex flex-wrap gap-2">
+            <Button
+              variant={activeTab === 'requests' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('requests')}
+              className={`${activeTab === 'requests' ? 'bg-white text-gray-900' : 'bg-white/20 text-white border-white/30 hover:bg-white/30'}`}
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Leave Requests ({stats.pending})
+            </Button>
+            <Button
+              variant={activeTab === 'on-leave' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('on-leave')}
+              className={`${activeTab === 'on-leave' ? 'bg-white text-gray-900' : 'bg-white/20 text-white border-white/30 hover:bg-white/30'}`}
+            >
+              <Calendar className="w-4 h-4 mr-2" />
+              Currently on Leave ({currentlyOnLeave.length})
+            </Button>
+            <Button
+              variant={activeTab === 'quotas' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('quotas')}
+              className={`${activeTab === 'quotas' ? 'bg-white text-gray-900' : 'bg-white/20 text-white border-white/30 hover:bg-white/30'}`}
+            >
+              <BarChart3 className="w-4 h-4 mr-2" />
+              User Quotas ({userQuotas.length})
+            </Button>
           </div>
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
             <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <div className="w-12 h-12 mx-auto mb-4 bg-blue-600 rounded-full flex items-center justify-center">
+                <FileText className="w-6 h-6 text-white" />
               </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Total Requests</div>
+              <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">{stats.total}</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">Total Requests</div>
             </CardContent>
           </Card>
           
-          <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
+          <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
             <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              <div className="w-12 h-12 mx-auto mb-4 bg-amber-600 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-white" />
               </div>
-              <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Pending</div>
+              <div className="text-3xl font-bold text-amber-600 dark:text-amber-400 mb-1">{stats.pending}</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">Pending</div>
             </CardContent>
           </Card>
           
-          <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
+          <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
             <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+              <div className="w-12 h-12 mx-auto mb-4 bg-green-600 rounded-full flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-white" />
               </div>
-              <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Approved</div>
+              <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">{stats.approved}</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">Approved</div>
             </CardContent>
           </Card>
           
-          <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
+          <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
             <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
-                <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <div className="w-12 h-12 mx-auto mb-4 bg-red-600 rounded-full flex items-center justify-center">
+                <XCircle className="w-6 h-6 text-white" />
               </div>
-              <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Rejected</div>
+              <div className="text-3xl font-bold text-red-600 dark:text-red-400 mb-1">{stats.rejected}</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">Rejected</div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 shadow-sm">
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 mx-auto mb-4 bg-purple-600 rounded-full flex items-center justify-center">
+                <Users className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-3xl font-bold text-purple-600 dark:text-purple-400 mb-1">{currentlyOnLeave.length}</div>
+              <div className="text-sm text-gray-500 dark:text-slate-400">On Leave Today</div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Filters */}
-        <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
-          <CardContent className="p-6">
-            <div className="flex flex-col lg:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
-                  <Input
-                    placeholder="Search by employee name, ID, or leave type..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex gap-4">
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-40">
-                    <span className="mr-2">🔽</span>
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Leave Requests */}
-        <Card className="bg-white border-0 shadow-lg dark:bg-slate-800">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <span>📅</span>
-              Leave Requests
-              <Badge variant="secondary" className="ml-auto">
-                {filteredRequests.length} requests
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {filteredRequests.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="text-6xl mb-4">📋</div>
-                  <p className="text-gray-500 dark:text-gray-400">No leave requests found</p>
-                </div>
-              ) : (
-                filteredRequests.map((request) => (
-                  <div
-                    key={request.id}
-                    className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors cursor-pointer"
-                    onClick={() => openDetailModal(request)}
-                  >
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
-                        {request.user?.full_name.charAt(0) || 'U'}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <div className="font-medium text-gray-900 dark:text-white">
-                            {request.user?.full_name}
-                          </div>
-                          <Badge variant="outline" className="text-xs">
-                            {request.user?.employee_id}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-                          <div className="flex items-center gap-1">
-                            <span>📅</span>
-                            {formatDate(request.start_date)} - {formatDate(request.end_date)}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span>⏰</span>
-                            {request.days_count} day{request.days_count !== 1 ? 's' : ''}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-4">
-                      <Badge className={getLeaveTypeColor(request.leave_type?.color || 'gray')}>
-                        {request.leave_type?.name}
-                      </Badge>
-                      
-                      <Badge className={`${getStatusColor(request.status)} flex items-center gap-1`}>
-                        {getStatusIcon(request.status)}
-                        {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                      </Badge>
-                      
-                      {request.status === 'pending' && (
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleApproveRequest(request.id)
-                            }}
-                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1"
-                          >
-                            <Check className="w-4 h-4 mr-1" />
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleRejectRequest(request.id)
-                            }}
-                            className="border-red-300 dark:border-red-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-3 py-1"
-                          >
-                            <span className="mr-1">❌</span>
-                            Reject
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Tab Content */}
+        {activeTab === 'requests' && <LeaveRequestsTab />}
+        {activeTab === 'on-leave' && <CurrentlyOnLeaveTab />}
+        {activeTab === 'quotas' && <UserQuotasTab />}
       </div>
 
       {/* Detail Modal */}
@@ -563,9 +776,16 @@ export default function LeaveManagementPage() {
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   {selectedRequest.user?.full_name}
                 </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {selectedRequest.user?.employee_id} • {selectedRequest.user?.primary_role}
-                </p>
+                <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
+                  <div>{selectedRequest.user?.employee_id} • {selectedRequest.user?.primary_role}</div>
+                  {selectedRequest.user?.ic_number && (
+                    <div className="flex items-center justify-center">
+                      <Badge variant="outline" className="text-xs bg-blue-50 text-blue-600">
+                        IC: {selectedRequest.user.ic_number}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
@@ -612,6 +832,102 @@ export default function LeaveManagementPage() {
                 </p>
               </div>
               
+              {/* File Attachments Section */}
+              {(selectedRequest.medical_certificate_url || (selectedRequest.attachments && (typeof selectedRequest.attachments === 'string' ? selectedRequest.attachments : selectedRequest.attachments.length > 0))) && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                    <span>📎</span>
+                    Supporting Documents
+                  </label>
+                  <div className="space-y-2">
+                    {selectedRequest.medical_certificate_url && (
+                      <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded flex items-center justify-center">
+                          <span className="text-blue-600 dark:text-blue-400 text-sm">🏥</span>
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">Medical Certificate</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">PDF Document</div>
+                        </div>
+                        <a 
+                          href={selectedRequest.medical_certificate_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
+                        >
+                          View
+                        </a>
+                      </div>
+                    )}
+                    
+                    {selectedRequest.attachments && (
+                      <>
+                        {typeof selectedRequest.attachments === 'string' ? (
+                          <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                            <div className="w-8 h-8 bg-gray-100 dark:bg-gray-600 rounded flex items-center justify-center">
+                              <span className="text-gray-600 dark:text-gray-400 text-sm">📄</span>
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">Attachment</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">Document</div>
+                            </div>
+                            <a 
+                              href={selectedRequest.attachments} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
+                            >
+                              View
+                            </a>
+                          </div>
+                        ) : (
+                          selectedRequest.attachments.map((attachment, index) => {
+                            const getFileIcon = (fileName?: string) => {
+                              if (!fileName) return '📄'
+                              const ext = fileName.toLowerCase().split('.').pop()
+                              switch (ext) {
+                                case 'pdf': return '📄'
+                                case 'doc': case 'docx': return '📝'
+                                case 'txt': return '📃'
+                                case 'jpg': case 'jpeg': case 'png': case 'gif': return '🖼️'
+                                default: return '📄'
+                              }
+                            }
+                            
+                            return (
+                              <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                                <div className="w-8 h-8 bg-gray-100 dark:bg-gray-600 rounded flex items-center justify-center">
+                                  <span className="text-gray-600 dark:text-gray-400 text-sm">{getFileIcon(attachment.fileName)}</span>
+                                </div>
+                                <div className="flex-1">
+                                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                    {attachment.fileName || 'Document'}
+                                  </div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    {attachment.fileType || 'File'}
+                                    {attachment.uploadedAt && ` • ${formatDate(attachment.uploadedAt)}`}
+                                  </div>
+                                </div>
+                                {attachment.fileUrl && (
+                                  <a 
+                                    href={attachment.fileUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
+                                  >
+                                    View
+                                  </a>
+                                )}
+                              </div>
+                            )
+                          })
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+              
               <div className="text-xs text-gray-500 dark:text-gray-400">
                 Applied on: {formatDateTime(selectedRequest.applied_date)}
               </div>
@@ -654,6 +970,106 @@ export default function LeaveManagementPage() {
                     <XCircle className="w-4 h-4 mr-2" />
                     Reject
                   </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* User Quota Details Modal */}
+      <Dialog open={showQuotaModal} onOpenChange={setShowQuotaModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5" />
+              Leave Quota Details
+            </DialogTitle>
+          </DialogHeader>
+          {selectedUserQuota && (
+            <div className="space-y-6">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold text-xl mx-auto mb-3">
+                  {selectedUserQuota.user_name?.charAt(0) || 'U'}
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {selectedUserQuota.user_name}
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {selectedUserQuota.employee_id} • {selectedUserQuota.role}
+                </p>
+              </div>
+              
+              {/* Quota Summary */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    {selectedUserQuota.total_quota || 0}
+                  </div>
+                  <div className="text-xs text-blue-600 dark:text-blue-400">Total Allocated</div>
+                </div>
+                <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                  <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                    {selectedUserQuota.total_used || 0}
+                  </div>
+                  <div className="text-xs text-orange-600 dark:text-orange-400">Days Used</div>
+                </div>
+                <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    {selectedUserQuota.total_remaining || 0}
+                  </div>
+                  <div className="text-xs text-green-600 dark:text-green-400">Remaining</div>
+                </div>
+              </div>
+              
+              {/* Leave Type Breakdown */}
+              {selectedUserQuota.leave_types && selectedUserQuota.leave_types.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Leave Type Breakdown</h4>
+                  <div className="space-y-3">
+                    {selectedUserQuota.leave_types.map((leaveType: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <Badge className={getLeaveTypeColor(leaveType.color || 'gray')}>
+                            {leaveType.name}
+                          </Badge>
+                        </div>
+                        <div className="text-right text-sm">
+                          <div className="font-medium text-gray-900 dark:text-white">
+                            {leaveType.used || 0} / {leaveType.quota || 0} days
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {leaveType.remaining || 0} remaining
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Recent Leave History */}
+              {selectedUserQuota.recent_leaves && selectedUserQuota.recent_leaves.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Recent Leave History</h4>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {selectedUserQuota.recent_leaves.map((leave: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between p-2 text-xs bg-gray-50 dark:bg-gray-700 rounded">
+                        <div>
+                          <span className="font-medium">{leave.leave_type_name}</span>
+                          <span className="text-gray-500 ml-2">
+                            {formatDate(leave.start_date)} - {formatDate(leave.end_date)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span>{leave.days_count} day{leave.days_count !== 1 ? 's' : ''}</span>
+                          <Badge className={getStatusColor(leave.status)}>
+                            {leave.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

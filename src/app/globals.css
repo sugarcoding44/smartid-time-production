@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.cdnfonts.com/css/aeonik');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -120,7 +121,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Aeonik', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   }
 }
 
@@ -149,9 +150,44 @@
     @apply dark:hover:bg-slate-700 dark:hover:border-slate-600;
   }
   
-  /* Header cards with indigo gradient */
+  /* Header cards with beautiful purple gradient for both light and dark modes */
   .header-card {
-    @apply dark:bg-gradient-to-br dark:from-violet-900 dark:to-purple-900 dark:border-purple-800/50;
+    @apply bg-gradient-to-br from-purple-600 via-violet-600 to-indigo-600 border-purple-300/50 text-white;
+    @apply dark:bg-gradient-to-br dark:from-purple-900 dark:via-violet-900 dark:to-indigo-900 dark:border-purple-800/50 dark:text-white;
+  }
+  
+  /* Ensure all text in header cards is white */
+  .header-card h1,
+  .header-card p,
+  .header-card div {
+    color: white;
+  }
+  
+  /* Fix button and input styling in header cards */
+  .header-card button {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: white;
+  }
+  
+  .header-card button:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+  
+  .header-card input {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: white;
+  }
+  
+  .header-card input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .header-card input:focus {
+    background-color: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
   }
   
   /* Status cards with proper colors */

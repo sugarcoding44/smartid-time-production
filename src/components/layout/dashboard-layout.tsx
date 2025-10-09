@@ -1,13 +1,15 @@
 'use client'
 
-import React from 'react'
+import React, { useCallback, useMemo, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/features/theme-toggle'
+import { SmartIDLogo } from '@/components/ui/smartid-logo'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { 
+import '@/styles/sidebar-optimizations.css'
+import {
   LayoutDashboard, 
   Users, 
   Clock, 
@@ -21,7 +23,9 @@ import {
   Crown,
   LogOut,
   ChevronRight,
-  Settings
+  Settings,
+  BarChart3,
+  Bell
 } from 'lucide-react'
 
 type NavigationItem = {
@@ -32,18 +36,50 @@ type NavigationItem = {
   category?: string
 }
 
+// Memoized navigation item to prevent unnecessary re-renders
+const NavigationLink = React.memo(({ item, isActive }: { item: NavigationItem; isActive: boolean }) => {
+  const IconComponent = item.icon
+  
+  return (
+    <Link
+      href={item.href}
+      prefetch={true}
+      className={`sidebar-nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors duration-75 group ${
+        isActive
+          ? 'bg-purple-600 text-white shadow-lg'
+          : 'text-gray-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-700/50'
+      }`}
+    >
+      <IconComponent className={`sidebar-icon w-5 h-5 transition-colors duration-75 ${
+        isActive 
+          ? 'text-white' 
+          : 'text-gray-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
+      }`} />
+      <span className="text-sm">{item.name}</span>
+      {item.premium && !isActive && (
+        <Crown className="w-3 h-3 text-yellow-500 ml-auto" />
+      )}
+      {isActive && (
+        <ChevronRight className="w-4 h-4 text-white ml-auto" />
+      )}
+    </Link>
+  )
+})
+
+NavigationLink.displayName = 'NavigationLink'
+
 const navigationSections = {
   core: {
     title: 'Core Features',
     items: [
       { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-      { name: 'User Management', href: '/simple-users', icon: Users },
+      { name: 'User Management', href: '/simple-users-v2', icon: Users },
     ] as NavigationItem[]
   },
   premium: {
     title: 'SmartID TIME (Premium)',
     items: [
-      { name: 'Attendance', href: '/attendance', icon: Clock, premium: true },
+      { name: 'Attendance', href: '/attendance-v2', icon: Clock, premium: true },
       { name: 'Leave Management', href: '/leave', icon: Calendar, premium: true },
       { name: 'Leave Types', href: '/leave-types', icon: Settings, premium: true },
       { name: 'Work Groups', href: '/work-groups', icon: UsersRound, premium: true },
@@ -59,9 +95,11 @@ const navigationSections = {
     ] as NavigationItem[]
   },
   analytics: {
-    title: 'Analytics & Settings',
+    title: 'Analytics & Reports',
     items: [
-      { name: 'Analytics', href: '/dashboard/analytics', icon: TrendingUp },
+      { name: 'Attendance Analytics', href: '/analytics', icon: BarChart3, premium: true },
+      { name: 'System Analytics', href: '/dashboard/analytics', icon: TrendingUp },
+      { name: 'Notifications', href: '/notifications', icon: Bell },
       { name: 'Profile Settings', href: '/profile', icon: Settings },
     ] as NavigationItem[]
   }
@@ -75,6 +113,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter()
   const pathname = usePathname()
   const supabase = createClient()
+  const [isPending, startTransition] = useTransition()
+
+  // Memoize navigation sections for better performance
+  const memoizedNavigationSections = useMemo(() => navigationSections, [])
+  
+  // Optimized click handler for navigation
+  const handleNavClick = useCallback((href: string, event: React.MouseEvent) => {
+    // Don't prevent default - let Next.js handle the navigation
+    // The Link component already handles prefetching and client-side routing
+  }, [])
 
   const handleSignOut = async () => {
     try {
@@ -134,17 +182,27 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Sidebar */}
       <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-2xl border-r border-gray-200 dark:bg-slate-800 dark:border-slate-700 hidden lg:flex lg:flex-col">
         {/* Logo */}
-        <div className="flex items-center gap-3 px-6 py-6 border-b border-gray-200 dark:border-slate-700 flex-shrink-0">
-          <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center text-white font-extrabold shadow-lg">
-            S
+        <div className="flex items-center border-b border-gray-200 dark:border-slate-700 flex-shrink-0 relative py-8">
+          <div className="w-full flex items-center justify-start px-4">
+            <div className="transition-opacity duration-300 ease-out">
+              <img 
+                src="/logos/time-logo-light.svg" 
+                alt="SmartID TIME" 
+                className="h-14 w-auto dark:hidden"
+              />
+              <img 
+                src="/logos/time-logo-dark.svg" 
+                alt="SmartID TIME" 
+                className="h-14 w-auto hidden dark:block"
+              />
+            </div>
           </div>
-          <span className="text-xl font-bold text-gray-900 dark:text-slate-50">SmartID</span>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 px-4 py-6 overflow-y-auto min-h-0 sidebar-scroll">
-          <div className="space-y-6 pb-4">
-            {Object.entries(navigationSections).map(([key, section]) => (
+          <div className="space-y-6 pb-4 sidebar-nav-container">
+            {Object.entries(memoizedNavigationSections).map(([key, section]) => (
               <div key={key} className="space-y-2">
                 {/* Section Title */}
                 <div className="flex items-center gap-2 px-3 py-2">
@@ -160,27 +218,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <ul className="space-y-1">
                   {section.items.map((item) => {
                     const isActive = pathname === item.href
-                    const IconComponent = item.icon
                     
                     return (
                       <li key={item.name}>
-                        <Link
-                          href={item.href}
-                          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-all duration-200 group ${
-                            isActive
-                              ? 'bg-indigo-600 text-white shadow-lg'
-                              : 'text-gray-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-700/50'
-                          }`}
-                        >
-                          <IconComponent className={`w-5 h-5 ${isActive ? 'text-white' : 'text-gray-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'}`} />
-                          <span className="text-sm">{item.name}</span>
-                          {item.premium && !isActive && (
-                            <Crown className="w-3 h-3 text-yellow-500 ml-auto" />
-                          )}
-                          {isActive && (
-                            <ChevronRight className="w-4 h-4 text-white ml-auto" />
-                          )}
-                        </Link>
+                        <NavigationLink item={item} isActive={isActive} />
                       </li>
                     )
                   })}
@@ -235,14 +276,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Mobile Navigation */}
         <div className="lg:hidden bg-white border-b border-gray-100 px-4 py-2">
           <div className="flex gap-1 overflow-x-auto pb-2">
-            {Object.values(navigationSections).flatMap(section => section.items).map((item) => {
+            {Object.values(memoizedNavigationSections).flatMap(section => section.items).map((item) => {
               const isActive = pathname === item.href
               const IconComponent = item.icon
               return (
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-all duration-200 whitespace-nowrap ${
+                  prefetch={true}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-all duration-75 whitespace-nowrap ${
                     isActive
                       ? 'bg-indigo-600 text-white shadow-md'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'

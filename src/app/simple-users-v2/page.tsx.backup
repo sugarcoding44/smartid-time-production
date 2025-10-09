@@ -1,0 +1,980 @@
+'use client'
+
+import React, { useState, useEffect } from 'react'
+import { DashboardLayout } from '@/components/layout/dashboard-layout'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { PalmEnrollmentModal } from '@/components/features/palm-enrollment-modal'
+import { CardIssuanceModal } from '@/components/features/card-issuance-modal'
+import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
+import { UserPlus, LayoutGrid, ListIcon, Search, User, Mail, Phone, Calendar, Clock, AlertTriangle, CheckCircle, Edit, Trash2, Smartphone, Shield, Plus, GraduationCap, Users, Crown, Star, Hand, CreditCard, Eye } from 'lucide-react'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
+import { Switch } from '@/components/ui/switch'
+
+type User = {
+  id: string
+  fullName: string
+  employeeId: string
+  userType: string
+  icNumber: string
+  email: string | null
+  phone: string
+  palmId: string | null
+  smartCardId: string | null
+  createdAt: string
+  biometricEnrolled: boolean
+  cardIssued: boolean
+  avatar_url?: string
+  status: 'active' | 'inactive' | 'suspended'
+}
+
+const userTypeColors = {
+  teacher: 'bg-green-100 text-green-800 border-green-200',
+  staff: 'bg-blue-100 text-blue-800 border-blue-200',
+  student: 'bg-purple-100 text-purple-800 border-purple-200',
+  admin: 'bg-red-100 text-red-800 border-red-200',
+  superadmin: 'bg-purple-100 text-purple-800 border-purple-200'
+}
+
+const userTypeIcons = {
+  teacher: Users,
+  staff: User,
+  student: GraduationCap,
+  admin: Shield,
+  superadmin: Crown
+}
+
+export default function SimpleUserManagementV2Page() {
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
+  const [institutionId, setInstitutionId] = useState<string | null>(null)
+  const [currentUserName, setCurrentUserName] = useState<string>('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterType, setFilterType] = useState('all')
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false)
+  const [addingUser, setAddingUser] = useState(false)
+  const [palmModalOpen, setPalmModalOpen] = useState(false)
+  const [cardModalOpen, setCardModalOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
+  const [selectedStatus, setSelectedStatus] = useState('all')
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<User | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  useEffect(() => {
+    initializeData()
+  }, [])
+
+  const initializeData = async () => {
+    try {
+      setLoading(true)
+      const supabase = createClient()
+      
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+      
+      if (authError || !authUser) {
+        toast.error('Please sign in to access user management')
+        return
+      }
+      
+      let currentUser = null
+      
+      const { data: userByAuthId } = await supabase
+        .from('users')
+        .select('*')
+        .eq('auth_user_id', authUser.id)
+        .single()
+      
+      if (userByAuthId) {
+        currentUser = userByAuthId
+      } else {
+        const { data: userById } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', authUser.id)
+          .single()
+        
+        if (userById) {
+          currentUser = userById
+        } else if (authUser.email) {
+          const { data: userByEmail } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', authUser.email)
+            .single()
+          
+          currentUser = userByEmail
+        }
+      }
+      
+      if (!currentUser) {
+        toast.error('User profile not found. Please contact support.')
+        return
+      }
+      
+      if (!['time_web', 'time_mobile'].includes(currentUser.primary_system)) {
+        toast.error('Access denied. This page is only for TIME system users.')
+        return
+      }
+      
+      if (!currentUser.institution_id) {
+        toast.error('User is not associated with any institution')
+        return
+      }
+      
+      setInstitutionId(currentUser.institution_id)
+      setCurrentUserName(currentUser.full_name)
+      
+      await fetchUsers(currentUser.institution_id)
+      
+    } catch (error) {
+      console.error('Initialization error:', error)
+      toast.error('Failed to initialize user management')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchUsers = async (instId: string) => {
+    try {
+      const response = await fetch(`/api/users?institutionId=${instId}`)
+      const result = await response.json()
+      
+      if (result.success) {
+        const timeUsers = (result.users || []).filter((user: any) => {
+          return ['time_web', 'time_mobile'].includes(user.primary_system)
+        })
+        
+        const transformedUsers: User[] = timeUsers.map((user: any) => ({
+          id: user.id,
+          fullName: user.full_name,
+          employeeId: user.employee_id,
+          userType: user.smartid_hub_role || user.primary_role,
+          icNumber: user.ic_number,
+          email: user.email,
+          phone: user.phone || '',
+          palmId: user.palm_id || null,
+          smartCardId: user.smart_card_id || null,
+          createdAt: user.created_at?.split('T')[0] || '',
+          biometricEnrolled: !!user.palm_id,
+          cardIssued: !!user.smart_card_id,
+          avatar_url: user.avatar_url,
+          status: user.status || 'active'
+        }))
+        
+        setUsers(transformedUsers)
+      } else {
+        toast.error(result.error || 'Failed to fetch users')
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error)
+      toast.error('Failed to fetch users')
+    }
+  }
+
+  const handleAddUser = async (data: any) => {
+    if (!institutionId) {
+      toast.error('Institution not found')
+      return
+    }
+
+    try {
+      setAddingUser(true)
+      
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...data,
+          institution_id: institutionId,
+          smartid_time_role: data.primary_role,
+          primary_system: 'time_web',
+          status: 'active'
+        }),
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        toast.success('User added successfully!')
+        // Refresh users list
+        await fetchUsers(institutionId)
+      } else {
+        toast.error(result.error || 'Failed to add user')
+      }
+    } catch (error) {
+      console.error('Error adding user:', error)
+      toast.error('Failed to add user')
+    } finally {
+      setAddingUser(false)
+    }
+  }
+
+  const handlePalmEnrollment = async (userId: string, palmId: string) => {
+    console.log('Palm enrollment completed:', { userId, palmId })
+    if (institutionId) {
+      await fetchUsers(institutionId)
+    }
+  }
+
+  const handleCardIssuance = async (userId: string, cardId: string) => {
+    console.log('Card issuance completed:', { userId, cardId })
+    if (institutionId) {
+      await fetchUsers(institutionId)
+    }
+  }
+
+  const confirmDelete = (user: User) => {
+    setUserToDelete(user)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return
+
+    setIsDeleting(true)
+    try {
+      await fetch(`/api/users/${userToDelete.id}`, {
+        method: 'DELETE'
+      })
+
+      toast.success(`${userToDelete.fullName} has been removed`)
+      setDeleteDialogOpen(false)
+      setUserToDelete(null)
+      
+      if (institutionId) {
+        await fetchUsers(institutionId)
+      }
+    } catch (error) {
+      console.error('Failed to delete user:', error)
+      toast.error('Failed to remove user')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const handleResendEmail = async (user: User) => {
+    try {
+      const response = await fetch('/api/users/resend-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: user.id }),
+      })
+
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        toast.success(`Welcome email sent to ${user.email}!`)
+      } else {
+        toast.error(result.error || 'Failed to send email')
+      }
+    } catch (error) {
+      console.error('Error resending email:', error)
+      toast.error('Failed to send email')
+    }
+  }
+
+  const openPalmModal = (user: User) => {
+    setSelectedUser(user)
+    setPalmModalOpen(true)
+  }
+
+  const openCardModal = (user: User) => {
+    setSelectedUser(user)
+    setCardModalOpen(true)
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-100 text-green-800 border-green-200'
+      case 'inactive': return 'bg-gray-100 text-gray-800 border-gray-200'
+      case 'suspended': return 'bg-red-100 text-red-800 border-red-200'
+      default: return 'bg-gray-100 text-gray-800 border-gray-200'
+    }
+  }
+
+  const UserCard = ({ user }: { user: User }) => (
+    <div className="group bg-white dark:bg-slate-800 rounded-xl shadow-sm hover:shadow-md border border-gray-200 dark:border-slate-700 transition-all duration-200 hover:scale-[1.01] overflow-hidden">
+      {/* Header */}
+      <div className="p-6">
+        <div className="flex items-start gap-4">
+          <div className="relative flex-shrink-0">
+            <Avatar className="h-12 w-12">
+              <AvatarImage src={user.avatar_url} />
+              <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-semibold">
+                {user.fullName.split(' ').map(n => n[0]).join('')}
+              </AvatarFallback>
+            </Avatar>
+            {/* Status indicator */}
+            <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white dark:border-slate-800 ${
+              user.status === 'active' ? 'bg-green-500' : 
+              user.status === 'suspended' ? 'bg-red-500' : 'bg-gray-400'
+            }`}></div>
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between">
+              <div className="min-w-0">
+                <h3 className="font-semibold text-gray-900 dark:text-white text-base truncate">{user.fullName}</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  {(() => {
+                    const IconComponent = userTypeIcons[user.userType as keyof typeof userTypeIcons] || User;
+                    return <IconComponent className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />;
+                  })()}
+                  <span className="text-sm font-medium text-indigo-600 dark:text-indigo-400 capitalize">
+                    {user.userType}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Quick Actions */}
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-slate-700" title="View details">
+                  <Eye className="h-3 w-3" />
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-slate-700">
+                  <Edit className="h-3 w-3" />
+                </Button>
+                {user.email && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="h-7 w-7 p-0 hover:bg-blue-50 dark:hover:bg-blue-900 text-blue-600"
+                    onClick={() => handleResendEmail(user)}
+                  >
+                    <Mail className="h-3 w-3" />
+                  </Button>
+                )}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 w-7 p-0 hover:bg-red-50 dark:hover:bg-red-900 text-red-500"
+                  onClick={() => confirmDelete(user)}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+            
+            {/* Contact Details */}
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <User className="h-4 w-4" />
+                <span className="font-medium">{user.employeeId}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <Phone className="h-4 w-4" />
+                <span>{user.phone}</span>
+              </div>
+              {user.email && (
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <Mail className="h-4 w-4" />
+                  <span className="truncate">{user.email}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Services Section */}
+      <div className="border-t border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 p-4">
+        <h4 className="font-medium text-gray-900 dark:text-gray-100 text-sm mb-3">Services</h4>
+        
+        <div className="space-y-3">
+          {/* Palm Biometric */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Hand className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">Palm Biometric</span>
+            </div>
+            {user.biometricEnrolled ? (
+              <div className="flex items-center gap-1">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                <span className="text-xs font-medium text-green-600 dark:text-green-400">Active</span>
+              </div>
+            ) : (
+              <Button size="sm" className="h-7 text-xs px-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0 shadow-sm" onClick={() => openPalmModal(user)}>
+                Enroll
+              </Button>
+            )}
+          </div>
+          
+          {/* Smart Card */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">Smart Card</span>
+            </div>
+            {user.cardIssued ? (
+              <div className="flex items-center gap-1">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                <span className="text-xs font-medium text-green-600 dark:text-green-400">Issued</span>
+              </div>
+            ) : (
+              <Button size="sm" className="h-7 text-xs px-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0 shadow-sm" onClick={() => openCardModal(user)}>
+                Issue
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  const UserRow = ({ user }: { user: User }) => (
+    <div className="group p-4 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-all duration-200 border-b border-gray-100 dark:border-slate-700/50 last:border-0">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="relative">
+            <Avatar className="h-10 w-10 ring-2 ring-white dark:ring-slate-600 shadow-sm">
+              <AvatarImage src={user.avatar_url} />
+              <AvatarFallback className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-semibold">
+                {user.fullName.split(' ').map(n => n[0]).join('')}
+              </AvatarFallback>
+            </Avatar>
+            <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-slate-800 ${
+              user.status === 'active' ? 'bg-green-500' : 
+              user.status === 'suspended' ? 'bg-red-500' : 'bg-gray-400'
+            }`}></div>
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 mb-1">
+              <h3 className="font-semibold text-base text-gray-900 dark:text-white truncate">{user.fullName}</h3>
+              {(() => {
+                const IconComponent = userTypeIcons[user.userType as keyof typeof userTypeIcons] || User;
+                return <IconComponent className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />;
+              })()}
+              <Badge className="text-xs px-3 py-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                {user.userType.charAt(0).toUpperCase() + user.userType.slice(1)}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                <span className="font-medium">{user.employeeId}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4" />
+                <span>{user.phone}</span>
+              </div>
+              {user.email && (
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  <span className="truncate max-w-xs">{user.email}</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Services status */}
+            <div className="flex items-center gap-4 mt-1">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${user.biometricEnrolled ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Palm {user.biometricEnrolled ? 'Enrolled' : 'Pending'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${user.cardIssued ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Card {user.cardIssued ? 'Issued' : 'Pending'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {/* Service buttons */}
+          <div className="flex items-center gap-2">
+            {!user.biometricEnrolled && (
+              <Button size="sm" className="h-8 text-xs px-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0 shadow-sm flex items-center gap-1" onClick={() => openPalmModal(user)}>
+                <Hand className="h-3 w-3" />
+                Enroll Palm
+              </Button>
+            )}
+            {!user.cardIssued && (
+              <Button size="sm" className="h-8 text-xs px-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0 shadow-sm flex items-center gap-1" onClick={() => openCardModal(user)}>
+                <CreditCard className="h-3 w-3" />
+                Issue Card
+              </Button>
+            )}
+          </div>
+          
+          {/* Action buttons */}
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-slate-700" title="View details">
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-indigo-100 dark:hover:bg-indigo-900">
+              <Edit className="h-4 w-4" />
+            </Button>
+            {user.email && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900 text-blue-600"
+                onClick={() => handleResendEmail(user)}
+                title="Resend welcome email"
+              >
+                <Mail className="h-4 w-4" />
+              </Button>
+            )}
+            <Button 
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 hover:bg-red-100 dark:hover:bg-red-900 text-red-500"
+              onClick={() => confirmDelete(user)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  // Calculate filtered users based on search term, filter type, and selected status
+  const filteredUsers = users.filter(user => {
+    // Search filter
+    const matchesSearch = !searchTerm || 
+      user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.employeeId.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    // Type filter
+    const matchesType = filterType === 'all' || user.userType === filterType
+    
+    // Status filter
+    const matchesStatus = selectedStatus === 'all' || user.status === selectedStatus
+    
+    return matchesSearch && matchesType && matchesStatus
+  })
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 dark:bg-gradient-to-br dark:from-violet-900 dark:to-purple-900 rounded-2xl p-6 shadow-lg border border-purple-200 dark:border-purple-800/50">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-2">
+                <Users className="w-8 h-8 text-white" />
+                User Management
+              </h1>
+              <p className="text-white/90 dark:text-purple-200/90">Manage your institution users with modern tools and insights</p>
+            </div>
+            <div className="mt-4 lg:mt-0 flex items-center gap-4">
+              {/* Enhanced Add User Button */}
+              <AddStaffDialog
+                roles={[
+                  { id: 'teacher', name: 'Teacher' },
+                  { id: 'staff', name: 'Staff' },
+                  { id: 'student', name: 'Student' },
+                  { id: 'admin', name: 'Admin' }
+                ]}
+                onSubmit={handleAddUser}
+                isPending={addingUser}
+              />
+            </div>
+          </div>
+          
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Users</p>
+                  <p className="text-2xl font-bold text-indigo-600">{filteredUsers.length}</p>
+                </div>
+                <Users className="w-8 h-8 text-indigo-600" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Biometric Enrolled</p>
+                  <p className="text-2xl font-bold text-green-600">{users.filter(u => u.biometricEnrolled).length}</p>
+                </div>
+                <Hand className="w-8 h-8 text-green-600" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Cards Issued</p>
+                  <p className="text-2xl font-bold text-purple-600">{users.filter(u => u.cardIssued).length}</p>
+                </div>
+                <CreditCard className="w-8 h-8 text-purple-600" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        </div>
+
+        {/* Filters */}
+        <Card className="border border-gray-100 dark:border-slate-700">
+          <CardContent className="p-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Search users by name, email, or ID..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="w-full md:w-48">
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Users</SelectItem>
+                    <SelectItem value="teacher"><div className="flex items-center gap-2"><Users className="h-4 w-4 text-gray-600 dark:text-gray-400" /> Teachers</div></SelectItem>
+                    <SelectItem value="staff"><div className="flex items-center gap-2"><User className="h-4 w-4 text-gray-600 dark:text-gray-400" /> Staff</div></SelectItem>
+                    <SelectItem value="student"><div className="flex items-center gap-2"><GraduationCap className="h-4 w-4 text-gray-600 dark:text-gray-400" /> Students</div></SelectItem>
+                    <SelectItem value="admin"><div className="flex items-center gap-2"><Shield className="h-4 w-4 text-gray-600 dark:text-gray-400" /> Admins</div></SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-full md:w-48">
+                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="active"><div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-green-500"></div> Active</div></SelectItem>
+                    <SelectItem value="inactive"><div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-gray-400"></div> Inactive</div></SelectItem>
+                    <SelectItem value="suspended"><div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-500"></div> Suspended</div></SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* View Toggle with icons only */}
+                <div className="flex items-center bg-gray-100 dark:bg-slate-700 rounded-lg p-1">
+                  <Button
+                    variant={viewMode === 'card' ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode('card')}
+                    className={`h-8 w-8 p-0 ${viewMode === 'card' ? 'bg-white dark:bg-slate-600 shadow-sm text-gray-700 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'}`}
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'list' ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode('list')}
+                    className={`h-8 w-8 p-0 ${viewMode === 'list' ? 'bg-white dark:bg-slate-600 shadow-sm text-gray-700 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'}`}
+                  >
+                    <ListIcon className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Users Display */}
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+          </div>
+        ) : viewMode === 'card' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+            {filteredUsers.map(user => (
+              <UserCard key={user.id} user={user} />
+            ))}
+          </div>
+        ) : (
+          <Card className="border border-gray-100 dark:border-slate-700">
+            <CardContent className="p-0">
+              <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                {filteredUsers.map(user => (
+                  <UserRow key={user.id} user={user} />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {filteredUsers.length === 0 && !loading && (
+          <Card className="border border-gray-100 dark:border-slate-700">
+            <CardContent className="text-center py-12">
+              <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No users found</h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">Try adjusting your search or filter criteria</p>
+              <div className="text-sm text-gray-400 space-y-1">
+                <p>• Check your search terms</p>
+                <p>• Try different filters</p>
+                <p>• Add new users to your institution</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Modals */}
+        {selectedUser && (
+          <>
+            <PalmEnrollmentModal
+              isOpen={palmModalOpen}
+              onClose={() => setPalmModalOpen(false)}
+              user={{
+                id: selectedUser.id,
+                full_name: selectedUser.fullName,
+                employee_id: selectedUser.employeeId,
+                role: selectedUser.userType,
+                palm_id: selectedUser.palmId,
+                isReEnrollment: false
+              }}
+              onEnrollmentComplete={handlePalmEnrollment}
+            />
+
+            <CardIssuanceModal
+              isOpen={cardModalOpen}
+              onClose={() => setCardModalOpen(false)}
+              user={{
+                id: selectedUser.id,
+                fullName: selectedUser.fullName,
+                employeeId: selectedUser.employeeId,
+                userType: selectedUser.userType
+              }}
+              onIssuanceComplete={handleCardIssuance}
+            />
+          </>
+        )}
+
+        {/* Delete Confirmation */}
+        <ConfirmationDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          title="Remove User"
+          description={`Are you sure you want to remove ${userToDelete?.fullName} from your institution? This action cannot be undone.`}
+          confirmText="Remove User"
+          cancelText="Cancel"
+          variant="destructive"
+          isLoading={isDeleting}
+          onConfirm={handleDeleteUser}
+        />
+      </div>
+    </DashboardLayout>
+  )
+}
+
+// Add Staff Dialog Component
+interface AddStaffDialogProps {
+  roles: { id: string; name: string }[]
+  onSubmit: (data: any) => Promise<void>
+  isPending: boolean
+}
+
+function AddStaffDialog({ roles, onSubmit, isPending }: AddStaffDialogProps) {
+  const [open, setOpen] = useState(false)
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    role: '',
+    icNumber: '',
+    employeeCode: '',
+    isActive: true
+  })
+
+  // Auto-generate employee code when name changes
+  React.useEffect(() => {
+    if (formData.name && !formData.employeeCode) {
+      const initials = formData.name.split(' ').map(n => n[0]).join('').toUpperCase()
+      const timestamp = Date.now().toString().slice(-4)
+      setFormData(prev => ({
+        ...prev,
+        employeeCode: `${initials}${timestamp}`
+      }))
+    }
+  }, [formData.name])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!formData.name || !formData.phone || !formData.role || !formData.icNumber) {
+      toast.error('Please fill in all required fields')
+      return
+    }
+
+    try {
+      await onSubmit({
+        full_name: formData.name,
+        email: formData.email || null,
+        phone: formData.phone,
+        primary_role: formData.role,
+        ic_number: formData.icNumber,
+        status: 'active',
+        primary_system: 'time_mobile',
+        can_access_web_portal: ['admin', 'teacher'].includes(formData.role),
+        can_access_mobile: true
+      })
+      
+      // Reset form
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        role: '',
+        icNumber: '',
+        employeeCode: '',
+        isActive: true
+      })
+      setOpen(false)
+    } catch (error) {
+      console.error('Failed to create user:', error)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="bg-white/20 backdrop-blur-sm border border-white/30 text-white hover:bg-white/30 shadow-lg">
+          <Plus className="h-4 w-4 mr-2" />
+          Add User
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
+        <DialogHeader>
+          <DialogTitle>Add New User</DialogTitle>
+          <DialogDescription>
+            Create a new user account for SmartID TIME
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="overflow-y-auto flex-1 pr-2">
+          <form id="staff-form" onSubmit={handleSubmit} className="space-y-6">
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="staff-name">Full Name *</Label>
+                <Input 
+                  id="staff-name" 
+                  placeholder="Enter full name" 
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="staff-ic">IC Number *</Label>
+                <Input 
+                  id="staff-ic" 
+                  placeholder="e.g., 901234567890" 
+                  value={formData.icNumber}
+                  onChange={(e) => setFormData(prev => ({ ...prev, icNumber: e.target.value }))}
+                  required
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="staff-email">Email</Label>
+                  <Input 
+                    id="staff-email" 
+                    type="email" 
+                    placeholder="email@example.com" 
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="staff-phone">Phone *</Label>
+                  <Input 
+                    id="staff-phone" 
+                    placeholder="+60123456789" 
+                    value={formData.phone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="staff-role">Role *</Label>
+                <Select value={formData.role} onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roles.map(role => (
+                      <SelectItem key={role.id} value={role.id}>
+                        {role.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="staff-employee-code">Employee ID</Label>
+                <Input 
+                  id="staff-employee-code" 
+                  placeholder="Auto-generated" 
+                  value={formData.employeeCode}
+                  onChange={(e) => setFormData(prev => ({ ...prev, employeeCode: e.target.value }))}
+                  disabled
+                  className="bg-gray-50"
+                />
+                <p className="text-xs text-muted-foreground">Auto-generated from name - used for system login</p>
+              </div>
+            </div>
+          </form>
+        </div>
+        
+        <div className="flex justify-end gap-2 pt-4 border-t bg-white dark:bg-gray-900">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => setOpen(false)}
+            disabled={isPending}
+          >
+            Cancel
+          </Button>
+          <Button 
+            type="submit" 
+            form="staff-form"
+            disabled={isPending || !formData.name || !formData.phone || !formData.role || !formData.icNumber}
+          >
+            {isPending ? (
+              <>
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600 mr-2"></div>
+                Creating...
+              </>
+            ) : (
+              'Create User'
+            )}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}

@@ -1,0 +1,14 @@
+Medical Certificate
+
+Patient: Test User
+Date: 2025-10-04
+Doctor: Dr. Smith
+Clinic: Health Center
+
+This is to certify that the above patient is medically unfit for work 
+from December 20, 2024 to December 22, 2024 due to medical reasons.
+
+This certificate is issued for leave application purposes.
+
+Signed: Dr. Smith, MD
+Medical License: MD12345

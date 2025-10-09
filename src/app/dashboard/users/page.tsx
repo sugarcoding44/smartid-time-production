@@ -15,6 +15,7 @@ import { CardIssuanceModal } from '@/components/features/card-issuance-modal'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { Plus, Grid3x3, List, GraduationCap, UserCheck, UserCog, Hand, CreditCard, Edit, Trash2 } from 'lucide-react'
+import { HeaderSkeleton, UserCardSkeleton, TableSkeleton } from '@/components/ui/loading-skeletons'
 
 type User = {
   id: string
@@ -89,26 +90,22 @@ export default function UserManagementPage() {
     try {
       setLoading(true)
       
-      // Use the debug endpoint to get user info reliably
-      const debugResponse = await fetch('/api/debug/supabase')
-      const debugData = await debugResponse.json()
+      // Get current user from Supabase auth
+      const { data: { user: authUser } } = await supabase.auth.getUser()
       
-      const authTest = debugData.tests.find((t: any) => t.name === 'Auth Session')
-      const currentAuthUserId = authTest?.data?.userId
-      
-      if (!currentAuthUserId) {
-        toast.error('Authentication error: Please sign in again')
+      if (!authUser) {
+        toast.error('Please sign in to view users')
         setLoading(false)
         return
       }
 
-      console.log('🔍 Current auth user ID:', currentAuthUserId)
+      console.log('🔍 Current auth user ID:', authUser.id)
 
       // Get the current user's institution_id from users table using auth_user_id
       const { data: currentUser, error: userError } = await supabase
         .from('users')
         .select('institution_id, full_name, id')
-        .eq('auth_user_id', currentAuthUserId)
+        .or(`auth_user_id.eq.${authUser.id},id.eq.${authUser.id}`)
         .single()
 
       console.log('🔍 Current user lookup result:', currentUser)
@@ -188,15 +185,11 @@ export default function UserManagementPage() {
       const nextNumber = users.filter(u => u.userType === newUser.userType).length + 1
       const employeeId = `${typePrefix}${nextNumber.toString().padStart(4, '0')}`
 
-      // Get current user info from debug endpoint
-      const debugResponse = await fetch('/api/debug/supabase')
-      const debugData = await debugResponse.json()
+      // Get current user from Supabase auth
+      const { data: { user: authUser } } = await supabase.auth.getUser()
       
-      const authTest = debugData.tests.find((t: any) => t.name === 'Auth Session')
-      const currentAuthUserId = authTest?.data?.userId
-      
-      if (!currentAuthUserId) {
-        toast.error('Authentication error: Please sign in again')
+      if (!authUser) {
+        toast.error('Please sign in to add users')
         return
       }
 
@@ -204,7 +197,7 @@ export default function UserManagementPage() {
       const { data: currentUser, error: userError } = await supabase
         .from('users')
         .select('institution_id')
-        .eq('auth_user_id', currentAuthUserId)
+        .or(`auth_user_id.eq.${authUser.id},id.eq.${authUser.id}`)
         .single()
 
       if (userError || !currentUser?.institution_id) {
@@ -352,20 +345,20 @@ export default function UserManagementPage() {
     <DashboardLayout>
       <div className="space-y-8">
         {/* Gradient Header */}
-        <div className="bg-white dark:bg-gradient-to-br dark:from-violet-900 dark:to-purple-900 rounded-2xl p-8 border-0 shadow-lg dark:border dark:border-purple-800/50">
+        <div className="rounded-2xl p-8 border-0 shadow-lg header-card">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">User Management 👥</h1>
-              <p className="text-gray-600 dark:text-purple-200/90">SMK Bukit Jelutong • Add and manage students, teachers, and staff with biometric enrollment</p>
+              <h1 className="text-3xl font-bold mb-2">User Management 👥</h1>
+              <p className="opacity-90">SMK Bukit Jelutong • Add and manage students, teachers, and staff with biometric enrollment</p>
             </div>
             <div className="flex gap-6 mt-4 lg:mt-0">
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{users.length}</div>
-                <div className="text-sm text-gray-500 dark:text-purple-200/70">Total Users</div>
+                <div className="text-2xl font-bold">{users.length}</div>
+                <div className="text-sm opacity-70">Total Users</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{Math.round((users.filter(u => u.biometricEnrolled && u.cardIssued).length / users.length) * 100)}%</div>
-                <div className="text-sm text-gray-500 dark:text-purple-200/70">Complete</div>
+                <div className="text-2xl font-bold">{Math.round((users.filter(u => u.biometricEnrolled && u.cardIssued).length / users.length) * 100)}%</div>
+                <div className="text-sm opacity-70">Complete</div>
               </div>
             </div>
           </div>
@@ -506,9 +499,15 @@ export default function UserManagementPage() {
 
         {/* Users Display */}
         {loading ? (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-          </div>
+          viewMode === 'card' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <UserCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : (
+            <TableSkeleton rows={8} />
+          )
         ) : viewMode === 'card' ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredUsers.map((user) => (

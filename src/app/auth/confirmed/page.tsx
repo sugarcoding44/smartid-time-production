@@ -23,12 +23,12 @@ export default function EmailConfirmedPage() {
   return (
     <AuthLayout
       title="Email Confirmed!"
-      subtitle="Your smartID HUB account is now active"
+      subtitle="Your smartID TIME account is now active"
     >
       <Card className="border-green-100 dark:border-green-800 bg-green-50/50 dark:bg-green-950/50 p-6 text-center mb-6">
         <div className="text-6xl mb-4">✅</div>
         <h3 className="text-lg font-semibold text-green-800 dark:text-green-200 mb-2">
-          Welcome to smartID HUB!
+          Welcome to smartID TIME!
         </h3>
         <p className="text-green-700 dark:text-green-300 mb-4">
           Your email has been confirmed and your account is now active. 

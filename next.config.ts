@@ -2,6 +2,32 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: false, // Temporarily disabled for debugging
+  
+  // Performance optimizations
+  experimental: {
+    optimizePackageImports: ['lucide-react'],
+    turbo: {
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    },
+  },
+  
+  // Optimize builds
+  swcMinify: true,
+  
+  // Prefetch optimization
+  async rewrites() {
+    return {
+      beforeFiles: [],
+      afterFiles: [],
+      fallback: [],
+    }
+  },
+  
   async headers() {
     return [
       {

@@ -1898,6 +1898,7 @@ export type Database = {
           smartid_hub_role: string | null
           smartid_pay_role: string | null
           smartid_pos_role: string | null
+          smartid_time_role: string | null
           status: string | null
           updated_at: string | null
         }
@@ -1931,6 +1932,7 @@ export type Database = {
           smartid_hub_role?: string | null
           smartid_pay_role?: string | null
           smartid_pos_role?: string | null
+          smartid_time_role?: string | null
           status?: string | null
           updated_at?: string | null
         }
@@ -1964,6 +1966,7 @@ export type Database = {
           smartid_hub_role?: string | null
           smartid_pay_role?: string | null
           smartid_pos_role?: string | null
+          smartid_time_role?: string | null
           status?: string | null
           updated_at?: string | null
         }

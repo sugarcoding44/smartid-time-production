@@ -33,19 +33,30 @@ export function QuickAddUserModal({ isOpen, onClose, onUserAdded }: QuickAddUser
     try {
       setAdding(true)
       
-      // Get institution ID (same as simple-users page)
+      // Get institution ID from current user (same logic as simple-users-v2)
       const debugResponse = await fetch('/api/debug/supabase')
       const debugData = await debugResponse.json()
       
-      const serviceTest = debugData.tests.find((t: any) => t.name === 'Service Role Client')
-      const currentUser = serviceTest?.data?.[0]
+      const authTest = debugData.tests.find((t: any) => t.name === 'Auth Session')
+      const currentAuthUserId = authTest?.data?.userId
       
-      if (!currentUser) {
-        toast.error('Could not load user information')
+      if (!currentAuthUserId) {
+        toast.error('Authentication required')
         return
       }
       
-      const institutionId = 'e808b0a5-af6b-4905-b3c1-f93d327a2559'
+      const serviceTest = debugData.tests.find((t: any) => t.name === 'Service Role Client')
+      const allUsers = serviceTest?.data || []
+      
+      let currentUser = allUsers.find((u: any) => u.auth_user_id === currentAuthUserId)
+      if (!currentUser) {
+        currentUser = allUsers.find((u: any) => u.id === currentAuthUserId)
+      }
+      
+      if (!currentUser?.institution_id) {
+        toast.error('Institution not found')
+        return
+      }
       
       const response = await fetch('/api/users', {
         method: 'POST',
@@ -58,7 +69,10 @@ export function QuickAddUserModal({ isOpen, onClose, onUserAdded }: QuickAddUser
           ic_number: newUser.icNumber,
           email: newUser.email || null,
           phone: newUser.phone || null,
-          institution_id: institutionId
+          institution_id: currentUser.institution_id,
+          smartid_time_role: newUser.userType,
+          primary_system: 'time_web',
+          status: 'active'
         }),
       })
 

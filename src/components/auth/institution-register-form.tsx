@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { InstitutionLocationStep } from './institution-location-step'
 import { 
   Building2, 
   User, 
@@ -29,7 +28,6 @@ import {
   Shield,
   Clock,
   ChartBar,
-  MapPin
 } from 'lucide-react'
 
 interface InstitutionRegisterFormProps {
@@ -48,15 +46,11 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
     adminPassword: '',
     confirmPassword: '',
     subscriptionPlan: 'free' as 'free' | 'premium',
-    address: '',
-    latitude: 0,
-    longitude: 0,
-    attendanceRadius: 300
   })
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
-  const totalSteps = 5
+  const totalSteps = 4
 
   const handleSubmit = async () => {
     setLoading(true)
@@ -74,10 +68,6 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
           adminIcNumber: formData.adminIcNumber,
           adminPassword: formData.adminPassword,
           subscriptionPlan: formData.subscriptionPlan,
-          address: formData.address,
-          latitude: formData.latitude,
-          longitude: formData.longitude,
-          attendanceRadius: formData.attendanceRadius
         })
       })
 
@@ -141,13 +131,6 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
             }
             return true
             
-          case 4:
-            if (!formData.address || !formData.latitude || !formData.longitude) {
-              toast.error('Please select institution location')
-              return false
-            }
-            return true
-          
           default:
             return true
     }
@@ -180,12 +163,12 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
           <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200 dark:bg-gray-700 -z-10">
             <div 
               className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500"
-              style={{ width: `${((currentStep - 1) / (totalSteps - 1)) * 100}%` }}
+              style={{ width: `${((currentStep - 1) / 3) * 100}%` }}
             />
           </div>
           
           {/* Step Indicators */}
-          {[1, 2, 3, 4, 5].map((step) => (
+          {[1, 2, 3, 4].map((step) => (
             <div key={step} className="flex flex-col items-center">
               <div 
                 className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
@@ -199,7 +182,7 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
               <span className={`text-xs mt-2 font-medium ${
                 step <= currentStep ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'
               }`}>
-                {step === 1 ? 'Institution' : step === 2 ? 'Administrator' : step === 3 ? 'Security' : step === 4 ? 'Location' : 'Plan'}
+                {step === 1 ? 'Institution' : step === 2 ? 'Administrator' : step === 3 ? 'Security' : 'Plan'}
               </span>
             </div>
           ))}
@@ -410,37 +393,8 @@ export function InstitutionRegisterForm({ onToggleForm }: InstitutionRegisterFor
           </div>
         )}
 
-        {/* Step 4: Location */}
+        {/* Step 4: Choose Plan */}
         {currentStep === 4 && (
-          <div className="space-y-6 animate-in fade-in-50 duration-500">
-            <div className="text-center mb-6">
-              <div className="inline-flex p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl mb-4">
-                <MapPin className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-              </div>
-              <h2 className="text-2xl font-bold mb-2">Institution Location</h2>
-              <p className="text-gray-600 dark:text-gray-400">Set your location for attendance tracking</p>
-            </div>
-
-            <InstitutionLocationStep
-              locationData={{
-                address: formData.address,
-                latitude: formData.latitude,
-                longitude: formData.longitude,
-                attendanceRadius: formData.attendanceRadius
-              }}
-              onLocationChange={(data) => {
-                setFormData(prev => ({
-                  ...prev,
-                  ...data
-                }))
-              }}
-              disabled={loading}
-            />
-          </div>
-        )}
-
-        {/* Step 5: Choose Plan */}
-        {currentStep === 5 && (
           <div className="space-y-6 animate-in fade-in-50 duration-500">
             <div className="text-center mb-8">
               <div className="inline-flex p-3 bg-amber-100 dark:bg-amber-900/30 rounded-2xl mb-4">

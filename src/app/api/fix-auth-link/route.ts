@@ -72,8 +72,8 @@ export async function GET(request: NextRequest) {
         email: authEmail,
         employee_id: 'AD0001',
         primary_role: 'admin',
-        primary_system: 'hub_web',
-        smartid_hub_role: 'admin',
+        primary_system: 'time_web',
+        smartid_time_role: 'admin',
         ic_number: '000000-00-0000',
         institution_id: institutionId,
         status: 'active'

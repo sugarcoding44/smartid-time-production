@@ -414,14 +414,24 @@ export default function SetupLocationPage() {
       // Simplified approach: Let middleware handle auth, API will use server-side session
       console.log('🎆 Making API call to setup-location (middleware ensures auth)...')
       
-      const response = await fetch('/api/setup-location', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // This sends cookies with the request
-        body: JSON.stringify(locationData)
-      })
+      // Use cookie-based auth; avoid awaiting getSession to prevent hangs
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 15000)
+
+      let response: Response
+      try {
+        response = await fetch('/api/setup-location', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(locationData),
+          signal: controller.signal,
+        })
+      } finally {
+        clearTimeout(timeout)
+      }
 
       console.log('📊 API response status:', response.status)
       const result = await response.json()

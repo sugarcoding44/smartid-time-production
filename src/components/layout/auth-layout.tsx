@@ -1,6 +1,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { ThemeToggle } from '@/components/features/theme-toggle'
+import { SmartIDLogo } from '@/components/ui/smartid-logo'
 
 interface AuthLayoutProps {
   children: React.ReactNode
@@ -25,11 +26,17 @@ export function AuthLayout({ children, title, subtitle }: AuthLayoutProps) {
       <div className="w-full max-w-2xl">
         {/* Logo */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-3 text-2xl font-bold text-gray-900 dark:text-white transition-colors">
-            <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center text-white font-extrabold shadow-lg">
-              s
-            </div>
-            smartID TIME
+          <Link href="/" className="inline-block transition-opacity hover:opacity-80">
+            <img 
+              src="/logos/time-logo-light.svg" 
+              alt="SmartID TIME" 
+              className="h-16 w-auto dark:hidden mx-auto"
+            />
+            <img 
+              src="/logos/time-logo-dark.svg" 
+              alt="SmartID TIME" 
+              className="h-16 w-auto hidden dark:block mx-auto"
+            />
           </Link>
         </div>
 
