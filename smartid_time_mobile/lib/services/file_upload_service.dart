@@ -1,9 +1,7 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/services.dart';
 
 class FileUploadService extends ChangeNotifier {
   static const String apiBaseUrl = 'http://localhost:3003/api';

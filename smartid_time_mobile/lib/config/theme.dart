@@ -119,12 +119,12 @@ class SmartIdTheme {
       ),
       
       // Card Theme
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: white,
         elevation: 2,
-        shadowColor: Colors.black.withOpacity(0.1),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+        shadowColor: const Color(0x1A000000),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
         ),
       ),
       
@@ -134,7 +134,7 @@ class SmartIdTheme {
           backgroundColor: primaryBlue,
           foregroundColor: white,
           elevation: 2,
-          shadowColor: primaryBlue.withOpacity(0.3),
+          shadowColor: Color.fromRGBO(30, 64, 175, 0.3),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
@@ -152,18 +152,18 @@ class SmartIdTheme {
         fillColor: white,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: gray.withOpacity(0.3)),
+          borderSide: BorderSide(color: Color.fromRGBO(100, 116, 139, 0.3)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: gray.withOpacity(0.3)),
+          borderSide: BorderSide(color: Color.fromRGBO(100, 116, 139, 0.3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: primaryBlue, width: 2),
         ),
         labelStyle: const TextStyle(color: gray),
-        hintStyle: TextStyle(color: gray.withOpacity(0.7)),
+        hintStyle: TextStyle(color: Color.fromRGBO(100, 116, 139, 0.7)),
       ),
       
       // Text Theme
@@ -198,7 +198,7 @@ class SmartIdTheme {
       ),
       
       // Bottom Navigation Bar Theme
-      bottomNavigationBarTheme: const BottomNavigationBarTheme(
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: white,
         selectedItemColor: primaryBlue,
         unselectedItemColor: gray,
@@ -211,7 +211,7 @@ class SmartIdTheme {
   static MaterialColor _createMaterialColor(Color color) {
     List strengths = <double>[.05];
     Map<int, Color> swatch = {};
-    final int r = color.red, g = color.green, b = color.blue;
+    final int r = (color.r * 255).round(), g = (color.g * 255).round(), b = (color.b * 255).round();
 
     for (int i = 1; i < 10; i++) {
       strengths.add(0.1 * i);
@@ -289,7 +289,7 @@ class StatusCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
+                      color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(icon, color: color, size: 24),

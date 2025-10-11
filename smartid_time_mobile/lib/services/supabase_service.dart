@@ -46,6 +46,7 @@ class SupabaseService {
             full_name,
             employee_id,
             email,
+            ic_number,
             primary_role,
             smartid_time_role,
             phone,
@@ -76,6 +77,7 @@ class SupabaseService {
             full_name,
             employee_id,
             email,
+            ic_number,
             primary_role,
             smartid_time_role,
             phone,
@@ -123,7 +125,7 @@ class SupabaseService {
       
       final availableUsers = await _client
           .from('users')
-          .select('id, full_name, email, auth_user_id, status')
+          .select('id, full_name, email, ic_number, auth_user_id, status')
           .eq('status', 'active')
           .limit(5);
       

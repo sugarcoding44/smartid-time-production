@@ -184,11 +184,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get user's institution_id early for location verification
+    // Get user's institution_id and work_group early for location and time verification
     let institutionId = null
     let workGroupId = null
     let actualUserId = userId
     let institutionTimezone = 'Asia/Kuala_Lumpur' // Default timezone
+    let workGroupSchedule = null
     
     if (userId) {
       console.log(`🔍 DEBUG: Looking for user with auth_user_id: ${userId}`)
@@ -232,6 +233,67 @@ export async function POST(request: NextRequest) {
         console.log(`🏫 User belongs to institution: ${institutionId}`)
         console.log(`👤 Actual user ID: ${actualUserId} (auth: ${userId})`)
         console.log(`🔍 DEBUG: Found user: ${userData.data.full_name} (${userData.data.email})`)
+        
+        // Get user's work group assignment
+        try {
+          console.log(`🔍 Fetching work group for user_id: ${actualUserId}`)
+          
+          const { data: workGroupAssignment, error: workGroupError } = await serviceSupabase
+            .from('user_work_group_assignments')
+            .select(`
+              work_group_id,
+              work_groups (
+                id,
+                name,
+                default_start_time,
+                default_end_time,
+                working_days
+              )
+            `)
+            .eq('user_id', actualUserId)
+            .eq('is_active', true)
+            .single()
+          
+          console.log(`🔍 Work group query result:`, {
+            error: workGroupError,
+            data: workGroupAssignment,
+            errorMessage: workGroupError?.message,
+            errorCode: workGroupError?.code
+          })
+          
+          if (!workGroupError && workGroupAssignment?.work_groups) {
+            workGroupId = workGroupAssignment.work_group_id
+            workGroupSchedule = workGroupAssignment.work_groups
+            console.log(`📅 User assigned to work group: ${workGroupSchedule.name}`)
+            console.log(`🕐 Work hours: ${workGroupSchedule.default_start_time} - ${workGroupSchedule.default_end_time}`)
+          } else {
+            console.warn(`⚠️ No active work group found for user: ${actualUserId}`)
+            console.log(`🔍 Work group error details:`, {
+              error: workGroupError,
+              hasData: !!workGroupAssignment,
+              hasWorkGroups: !!workGroupAssignment?.work_groups
+            })
+            
+            // For now, continue without work group but warn - don't block completely
+            console.warn(`⚠️ Proceeding without work group - this should be fixed!`)
+            
+            // TODO: Re-enable strict enforcement after fixing work group assignments
+            /*
+            return NextResponse.json({
+              error: 'No work group assigned',
+              message: 'You must be assigned to a work group before you can check in. Please contact your administrator to assign you to a work group.',
+              suggestion: 'Contact your supervisor or HR department to get assigned to the appropriate work group.',
+              requires_admin_action: true
+            }, { 
+              status: 400, 
+              headers: corsHeaders() 
+            })
+            */
+          }
+        } catch (workGroupErr) {
+          console.error(`❌ Error fetching work group: ${workGroupErr}`)
+          console.warn(`⚠️ Proceeding without work group due to error`)
+        }
         
         // Get institution timezone
         if (institutionId) {
@@ -333,7 +395,25 @@ export async function POST(request: NextRequest) {
             approvalReason = `No verified institution locations found. Please set up institution location in web admin.`
             console.log(`⚠️ No verified locations found for institution: ${institutionId}`)
           } else {
+          console.log(`🏫 DEBUG: Found ${institutionLocations.length} verified location(s) for institution ${institutionId}:`)
+          institutionLocations.forEach((loc, index) => {
+            console.log(`   Location ${index + 1}: ${loc.name}`)
+            console.log(`     - Coordinates: ${loc.latitude}, ${loc.longitude}`)
+            console.log(`     - Attendance radius: ${loc.attendance_radius}m`)
+            console.log(`     - Address: ${loc.address}`)
+            const distanceToThis = calculateDistance(location.latitude, location.longitude, loc.latitude, loc.longitude)
+            console.log(`     - Distance from user: ${Math.round(distanceToThis)}m`)
+            console.log(`     - Within radius: ${distanceToThis <= loc.attendance_radius ? 'YES' : 'NO'}`)
+          })
+          
+          console.log(`📍 DEBUG: User location: ${location.latitude}, ${location.longitude}`)
+          
           const locationCheck = isAtInstitutionLocation(location.latitude, location.longitude, institutionLocations)
+          
+          console.log(`🔍 DEBUG: Location verification result:`)
+          console.log(`     - Is at school: ${locationCheck.isAtSchool}`)
+          console.log(`     - Nearest school: ${locationCheck.nearestSchool}`)
+          console.log(`     - Distance: ${locationCheck.distance}m`)
           
           if (locationCheck.isAtSchool) {
             status = 'present'
@@ -385,6 +465,119 @@ export async function POST(request: NextRequest) {
       
       console.log(`🕐 UTC time: ${now.toISOString()}`)
       console.log(`🕐 Local time (${institutionTimezone}): ${timezoneAdjustedTime.toISOString()}`)
+      
+      // Validate work hours - prevent check-in after work day ends
+      if (workGroupSchedule) {
+        const checkInHour = timezoneAdjustedTime.getHours()
+        const checkInMinute = timezoneAdjustedTime.getMinutes()
+        const checkInTotalMinutes = checkInHour * 60 + checkInMinute
+        
+        // Parse work end time
+        const [endHour, endMinute] = workGroupSchedule.default_end_time.split(':').map(Number)
+        const workEndMinutes = endHour * 60 + endMinute
+        
+        // Check if trying to check in after work day has ended
+        if (checkInTotalMinutes > workEndMinutes) {
+          const currentTimeStr = `${checkInHour.toString().padStart(2, '0')}:${checkInMinute.toString().padStart(2, '0')}`
+          console.log(`🙅 Check-in denied: Current time ${currentTimeStr} is after work end time ${workGroupSchedule.default_end_time}`)
+          
+          return NextResponse.json({
+            error: 'Check-in not allowed after work hours',
+            message: `Work day ends at ${workGroupSchedule.default_end_time}. Current time is ${currentTimeStr}.`,
+            suggestion: 'If you were present but unable to check in on time, please contact your supervisor to submit absence documentation.',
+            work_hours: {
+              start: workGroupSchedule.default_start_time,
+              end: workGroupSchedule.default_end_time
+            },
+            current_time: currentTimeStr,
+            should_be_marked_absent: true
+          }, { 
+            status: 400, 
+            headers: corsHeaders() 
+          })
+        }
+        
+        console.log(`✅ Work hours validation passed: Check-in time ${checkInHour.toString().padStart(2, '0')}:${checkInMinute.toString().padStart(2, '0')} is within work hours (${workGroupSchedule.default_start_time} - ${workGroupSchedule.default_end_time})`)
+      } else {
+        // FALLBACK: If no work group schedule, use default 6:00 PM end time
+        const checkInHour = timezoneAdjustedTime.getHours()
+        const checkInMinute = timezoneAdjustedTime.getMinutes()
+        const checkInTotalMinutes = checkInHour * 60 + checkInMinute
+        const fallbackEndTime = 18 * 60 // 6:00 PM
+        
+        console.warn(`⚠️ Using fallback work hours validation (end: 6:00 PM)`)
+        
+        if (checkInTotalMinutes > fallbackEndTime) {
+          const currentTimeStr = `${checkInHour.toString().padStart(2, '0')}:${checkInMinute.toString().padStart(2, '0')}`
+          console.log(`🙅 Check-in denied (fallback): Current time ${currentTimeStr} is after fallback end time 18:00`)
+          
+          return NextResponse.json({
+            error: 'Check-in not allowed after work hours',
+            message: `Work day ends at 18:00 (fallback schedule). Current time is ${currentTimeStr}.`,
+            suggestion: 'If you were present but unable to check in on time, please contact your supervisor to submit absence documentation.',
+            work_hours: {
+              start: '08:00',
+              end: '18:00'
+            },
+            current_time: currentTimeStr,
+            should_be_marked_absent: true,
+            note: 'Using fallback schedule - please ensure you are assigned to a work group for accurate work hours.'
+          }, { 
+            status: 400, 
+            headers: corsHeaders() 
+          })
+        }
+        
+        console.log(`✅ Fallback work hours validation passed: Check-in time ${checkInHour.toString().padStart(2, '0')}:${checkInMinute.toString().padStart(2, '0')} is before fallback end time (18:00)`)
+      }
+      
+      // Check if user is late (after work start time) - only if status is currently 'present'
+      if (status === 'present' && workGroupSchedule) {
+        const checkInHour = timezoneAdjustedTime.getHours()
+        const checkInMinute = timezoneAdjustedTime.getMinutes()
+        const checkInTotalMinutes = checkInHour * 60 + checkInMinute
+        
+        // Parse work start time from work group schedule
+        const [startHour, startMinute] = workGroupSchedule.default_start_time.split(':').map(Number)
+        const lateThreshold = startHour * 60 + startMinute
+        
+        if (checkInTotalMinutes > lateThreshold) {
+          status = 'late'
+          console.log(`⏰ Late check-in detected: ${checkInHour}:${checkInMinute.toString().padStart(2, '0')} (threshold: ${workGroupSchedule.default_start_time})`)
+          
+          // Add late reason to notes
+          const lateMinutes = checkInTotalMinutes - lateThreshold
+          const lateHours = Math.floor(lateMinutes / 60)
+          const lateRemainingMinutes = lateMinutes % 60
+          const lateTime = lateHours > 0 
+            ? `${lateHours}h ${lateRemainingMinutes}m` 
+            : `${lateMinutes}m`
+          
+          const lateNote = `Late arrival: ${lateTime} after work start time (${workGroupSchedule.default_start_time})`
+          approvalReason = approvalReason ? `${approvalReason} | ${lateNote}` : lateNote
+        }
+      } else if (status === 'present' && !workGroupSchedule) {
+        // Fallback to 9:00 AM if no work group schedule is found
+        const checkInHour = timezoneAdjustedTime.getHours()
+        const checkInMinute = timezoneAdjustedTime.getMinutes()
+        const checkInTotalMinutes = checkInHour * 60 + checkInMinute
+        const lateThreshold = 9 * 60 // 9:00 AM fallback
+        
+        if (checkInTotalMinutes > lateThreshold) {
+          status = 'late'
+          console.log(`⏰ Late check-in detected (fallback): ${checkInHour}:${checkInMinute.toString().padStart(2, '0')} (threshold: 9:00 AM)`)
+          
+          const lateMinutes = checkInTotalMinutes - lateThreshold
+          const lateHours = Math.floor(lateMinutes / 60)
+          const lateRemainingMinutes = lateMinutes % 60
+          const lateTime = lateHours > 0 
+            ? `${lateHours}h ${lateRemainingMinutes}m` 
+            : `${lateMinutes}m`
+          
+          const lateNote = `Late arrival: ${lateTime} after standard start time (9:00 AM - fallback)`
+          approvalReason = approvalReason ? `${approvalReason} | ${lateNote}` : lateNote
+        }
+      }
       
       const recordData = {
         employee_id: userEmployeeId,

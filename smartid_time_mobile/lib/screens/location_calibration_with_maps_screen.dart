@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/location_service.dart';
 import '../main.dart';
@@ -565,7 +564,7 @@ class _LocationCalibrationWithMapsScreenState extends State<LocationCalibrationW
                     child: Text(
                       'Location: ${_selectedLocation!.latitude.toStringAsFixed(6)}, ${_selectedLocation!.longitude.toStringAsFixed(6)}',
                       style: const TextStyle(
-                        color: SmartIdTheme.green300,
+                        color: SmartIdTheme.green500,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),

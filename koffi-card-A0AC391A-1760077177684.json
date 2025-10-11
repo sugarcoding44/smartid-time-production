@@ -1,0 +1,11 @@
+{
+  "uid": "A0AC391A",
+  "type": "mifare-1k",
+  "timestamp": 1760077161917,
+  "uidLength": 4,
+  "atq": "0004",
+  "sak": "08",
+  "detectedAt": "2025-10-10T06:19:21.917Z",
+  "reader": "XT-N424-WR-Koffi",
+  "sdk": "X-Telcom RFID1356.dll via Koffi"
+}

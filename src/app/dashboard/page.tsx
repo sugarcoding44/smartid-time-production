@@ -136,8 +136,8 @@ export default function DashboardPage() {
     <DashboardLayout>
       <div className="space-y-8">
         {/* Hero Section with Alipay+ Style */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-indigo-950 rounded-3xl p-8 md:p-12 border border-gray-100 dark:border-gray-700 shadow-xl">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
+        <div className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-indigo-950 rounded-2xl p-6 md:p-8 border border-gray-100 dark:border-gray-700 shadow-lg md:min-h-[220px]">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center relative z-10">
             {/* Left Content */}
             <div className="space-y-6">
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 rounded-full text-blue-600 text-sm font-medium">
@@ -145,7 +145,7 @@ export default function DashboardPage() {
               </div>
               
               <div className="space-y-4">
-                <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white leading-tight">
+                <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white leading-snug">
                   Welcome back,
                   <br />
                   <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
@@ -153,7 +153,7 @@ export default function DashboardPage() {
                   </span>
                 </h1>
                 
-                <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
+                <p className="text-base text-gray-600 dark:text-gray-300 leading-normal">
                   Your institution is running smoothly. Here's what's happening today.
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -190,16 +190,16 @@ export default function DashboardPage() {
             <div className="relative lg:ml-8">
               <div className="relative">
                 {/* Main Dashboard Card */}
-                <div className="relative bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-2xl border border-gray-100 dark:border-gray-700 transform hover:scale-105 transition-all duration-300">
-                  <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-4 rounded-2xl mb-4">
+                <div className="relative bg-white dark:bg-gray-800 rounded-3xl p-4 shadow-lg border border-gray-100 dark:border-gray-700 transition-all duration-300">
+                  <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-3 rounded-2xl mb-3">
                     <div className="text-lg font-bold mb-1">smartID TIME</div>
                     <div className="text-sm opacity-90">Live Dashboard</div>
                   </div>
                   
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     <div className="flex items-center justify-between animate-pulse">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-sm">
+                        <div className="w-6 h-6 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-xs">
                           ✓
                         </div>
                         <div>
@@ -212,7 +212,7 @@ export default function DashboardPage() {
                     
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full flex items-center justify-center text-sm">
+                        <div className="w-6 h-6 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full flex items-center justify-center text-xs">
                           📊
                         </div>
                         <div>
@@ -226,11 +226,11 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Floating Elements */}
-                <div className="absolute -top-2 -right-2 w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center text-white text-lg font-bold shadow-xl transform -rotate-12 hover:rotate-0 transition-transform duration-300">
+                <div className="absolute -top-2 -right-2 w-12 h-12 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl hidden md:flex items-center justify-center text-white text-base font-bold shadow-lg transform -rotate-12 hover:rotate-0 transition-transform duration-300">
                   🎯
                 </div>
                 
-                <div className="absolute -bottom-4 -left-4 w-12 h-12 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center text-white shadow-lg transform rotate-12 hover:rotate-6 transition-transform duration-300">
+                <div className="absolute -bottom-4 -left-4 w-10 h-10 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-xl hidden md:flex items-center justify-center text-white shadow-md transform rotate-12 hover:rotate-6 transition-transform duration-300">
                   ⚡
                 </div>
               </div>
@@ -238,8 +238,8 @@ export default function DashboardPage() {
           </div>
 
           {/* Background Decorations */}
-          <div className="absolute top-10 right-16 w-24 h-24 bg-gradient-to-r from-blue-200 to-indigo-200 rounded-full opacity-20 blur-xl"></div>
-          <div className="absolute bottom-12 left-12 w-16 h-16 bg-gradient-to-r from-purple-200 to-pink-200 rounded-full opacity-20 blur-xl"></div>
+          <div className="absolute top-10 right-16 w-16 h-16 bg-gradient-to-r from-blue-200 to-indigo-200 rounded-full opacity-20 blur-lg"></div>
+          <div className="absolute bottom-12 left-12 w-12 h-12 bg-gradient-to-r from-purple-200 to-pink-200 rounded-full opacity-20 blur-lg"></div>
         </div>
 
               {/* Stats Grid - Alipay+ Style */}
@@ -604,81 +604,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Premium Features Showcase - Alipay+ Style */}
-        <div className="relative bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 rounded-3xl p-8 shadow-2xl overflow-hidden">
-          <div className="absolute inset-0">
-            <div className="absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full transform -translate-x-32 -translate-y-32"></div>
-            <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/5 rounded-full transform translate-x-48 translate-y-48"></div>
-          </div>
-          <div className="relative text-white">
-            <div className="mb-8">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl">
-                  <Crown className="w-8 h-8 text-yellow-300" />
-                </div>
-                <div>
-                  <h2 className="text-3xl font-bold mb-2">SmartID TIME Premium</h2>
-                  <p className="text-indigo-100 text-lg opacity-90">Experience the power of advanced attendance management</p>
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Live Dashboard */}
-              <Link href="/live-attendance" className="group">
-                <div className="relative bg-white/15 backdrop-blur-md rounded-2xl p-8 hover:bg-white/25 transition-all duration-300 border border-white/20 hover:border-white/40 hover:shadow-2xl hover:-translate-y-1">
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <div className="relative">
-                    <div className="w-16 h-16 bg-white/25 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg">
-                      <Activity className="w-8 h-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold mb-3">Live Dashboard</h3>
-                    <p className="text-indigo-100 opacity-90 leading-relaxed">Real-time attendance tracking with auto-refresh and live statistics</p>
-                  </div>
-                </div>
-              </Link>
-
-              {/* Advanced Analytics */}
-              <Link href="/analytics" className="group">
-                <div className="relative bg-white/15 backdrop-blur-md rounded-2xl p-8 hover:bg-white/25 transition-all duration-300 border border-white/20 hover:border-white/40 hover:shadow-2xl hover:-translate-y-1">
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <div className="relative">
-                    <div className="w-16 h-16 bg-white/25 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg">
-                      <BarChart3 className="w-8 h-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold mb-3">Advanced Analytics</h3>
-                    <p className="text-indigo-100 opacity-90 leading-relaxed">Comprehensive reports, trends analysis, and performance insights</p>
-                  </div>
-                </div>
-              </Link>
-
-              {/* Smart Notifications */}
-              <Link href="/notifications" className="group">
-                <div className="relative bg-white/15 backdrop-blur-md rounded-2xl p-8 hover:bg-white/25 transition-all duration-300 border border-white/20 hover:border-white/40 hover:shadow-2xl hover:-translate-y-1">
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <div className="relative">
-                    <div className="w-16 h-16 bg-white/25 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg">
-                      <Bell className="w-8 h-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold mb-3">Smart Notifications</h3>
-                    <p className="text-indigo-100 opacity-90 leading-relaxed">Intelligent alerts for attendance issues and system updates</p>
-                  </div>
-                </div>
-              </Link>
-            </div>
-
-            <div className="mt-10 flex justify-center">
-              <Link href="/leave-requests">
-                <div className="group inline-flex items-center gap-3 px-8 py-4 bg-white text-indigo-600 hover:bg-gray-50 rounded-2xl font-semibold text-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
-                  <CalendarClock className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                  Manage Leave Requests
-                  <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                  </svg>
-                </div>
-              </Link>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Quick Action Modals */}

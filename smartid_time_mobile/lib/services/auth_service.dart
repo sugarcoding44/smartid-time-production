@@ -75,6 +75,7 @@ class AuthService extends ChangeNotifier {
           'primary_role': userData['primary_role'],
           'smartid_time_role': userData['smartid_time_role'],
           'phone': userData['phone'],
+          'ic_number': userData['ic_number'],
           'institution_name': userData['institutions']?['name'],
         };
         print('🏫 TIME Mobile - User institution_id: ${userData['institution_id']}');
@@ -146,6 +147,13 @@ class AuthService extends ChangeNotifier {
     } catch (e) {
       print('Error fetching dashboard data: $e');
       return null;
+    }
+  }
+
+  // Refresh user profile data
+  Future<void> refreshUserProfile() async {
+    if (_user?['id'] != null) {
+      await _fetchUserProfile(_user!['id']);
     }
   }
 }

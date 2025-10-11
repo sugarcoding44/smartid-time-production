@@ -38,9 +38,9 @@ class SmartIdTimeApp extends StatelessWidget {
       child: MaterialApp(
         title: 'SmartID TIME',
         debugShowCheckedModeBanner: false,
-        theme: SmartIdTheme.darkTheme,
+        theme: SmartIdTheme.lightTheme,
         darkTheme: SmartIdTheme.darkTheme,
-        themeMode: ThemeMode.dark,
+        themeMode: ThemeMode.system, // Follow system theme
         home: const AuthWrapper(),
       ),
     );
@@ -98,6 +98,7 @@ class SmartIdTheme {
   static const Color amber400 = Color(0xFFfbbf24);
   static const Color amber500 = Color(0xFFf59e0b);   // Added missing amber500
   static const Color orange500 = Color(0xFFf97316);
+  static const Color orange400 = Color(0xFFfb923c);
   static const Color violet400 = Color(0xFFa78bfa);
   static const Color red400 = Color(0xFFf87171);
   static const Color red500 = Color(0xFFef4444);
@@ -201,6 +202,107 @@ class SmartIdTheme {
         ),
         labelStyle: const TextStyle(color: slate400),
         hintStyle: const TextStyle(color: slate400),
+      ),
+    );
+  }
+
+  static ThemeData get lightTheme {
+    return ThemeData.light().copyWith(
+      primaryColor: indigo500,
+      scaffoldBackgroundColor: slate50,
+      colorScheme: const ColorScheme.light(
+        primary: indigo500,
+        primaryContainer: indigo600,
+        secondary: slate300,
+        secondaryContainer: slate200,
+        surface: Colors.white,
+        surfaceContainerHighest: slate100,
+        background: slate50,
+        error: red500,
+        onPrimary: Colors.white,
+        onSecondary: slate900,
+        onSurface: slate900,
+        onBackground: slate900,
+        onError: Colors.white,
+        outline: slate300,
+        shadow: Colors.black26,
+      ),
+      textTheme: const TextTheme(
+        displayLarge: TextStyle(color: slate900, fontWeight: FontWeight.w700),
+        displayMedium: TextStyle(color: slate900, fontWeight: FontWeight.w600),
+        displaySmall: TextStyle(color: slate900, fontWeight: FontWeight.w600),
+        headlineLarge: TextStyle(color: slate900, fontWeight: FontWeight.w600),
+        headlineMedium: TextStyle(color: slate900, fontWeight: FontWeight.w600),
+        headlineSmall: TextStyle(color: slate900, fontWeight: FontWeight.w600),
+        titleLarge: TextStyle(color: slate900, fontWeight: FontWeight.w600),
+        titleMedium: TextStyle(color: slate900, fontWeight: FontWeight.w500),
+        titleSmall: TextStyle(color: slate900, fontWeight: FontWeight.w500),
+        bodyLarge: TextStyle(color: slate900, fontWeight: FontWeight.w400),
+        bodyMedium: TextStyle(color: slate900, fontWeight: FontWeight.w400),
+        bodySmall: TextStyle(color: slate600, fontWeight: FontWeight.w400),
+        labelLarge: TextStyle(color: slate900, fontWeight: FontWeight.w500),
+        labelMedium: TextStyle(color: slate600, fontWeight: FontWeight.w500),
+        labelSmall: TextStyle(color: slate600, fontWeight: FontWeight.w400),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: false,
+        iconTheme: IconThemeData(color: slate900),
+        titleTextStyle: TextStyle(
+          color: slate900,
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          fontFamily: 'Inter',
+        ),
+      ),
+      cardTheme: CardThemeData(
+        color: Colors.white,
+        elevation: 0,
+        shadowColor: Colors.black12,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: slate200, width: 1),
+        ),
+        margin: const EdgeInsets.all(8),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: indigo500,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          textStyle: const TextStyle(
+            fontSize: 16, 
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Inter',
+          ),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: slate100,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: slate200),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: slate200),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: indigo500, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: red500),
+        ),
+        labelStyle: const TextStyle(color: slate600),
+        hintStyle: const TextStyle(color: slate600),
       ),
     );
   }

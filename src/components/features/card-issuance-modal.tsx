@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
+import { RFIDReaderComponent } from './rfid-reader-component'
+import { RFIDCard, CardUtils } from '@/lib/rfid-reader'
 
 interface CardIssuanceModalProps {
   isOpen: boolean
@@ -16,13 +18,15 @@ interface CardIssuanceModalProps {
     employeeId: string
     userType: string
   }
-  onIssuanceComplete: (userId: string, cardId: string) => void
+  onIssuanceComplete: (userId: string, cardId: string, rfidUID?: string) => void
 }
 
 export function CardIssuanceModal({ isOpen, onClose, user, onIssuanceComplete }: CardIssuanceModalProps) {
-  const [step, setStep] = useState<'instructions' | 'programming' | 'printing' | 'success' | 'error'>('instructions')
+  const [step, setStep] = useState<'instructions' | 'rfid-scan' | 'programming' | 'printing' | 'success' | 'error'>('instructions')
   const [progress, setProgress] = useState(0)
   const [cardId, setCardId] = useState('')
+  const [rfidUID, setRfidUID] = useState('')
+  const [detectedCard, setDetectedCard] = useState<RFIDCard | null>(null)
   const [issueAttempts, setIssueAttempts] = useState(0)
 
   useEffect(() => {
@@ -31,14 +35,31 @@ export function CardIssuanceModal({ isOpen, onClose, user, onIssuanceComplete }:
       setStep('instructions')
       setProgress(0)
       setCardId('')
+      setRfidUID('')
+      setDetectedCard(null)
       setIssueAttempts(0)
     }
   }, [isOpen])
 
   const startIssuance = () => {
-    setStep('programming')
+    setStep('rfid-scan')
     setProgress(0)
     setIssueAttempts(prev => prev + 1)
+  }
+
+  const handleRFIDCardDetected = (card: RFIDCard) => {
+    setDetectedCard(card)
+    setRfidUID(card.uid)
+    
+    // Proceed to programming after a short delay
+    setTimeout(() => {
+      continueWithProgramming()
+    }, 1500)
+  }
+
+  const continueWithProgramming = () => {
+    setStep('programming')
+    setProgress(0)
 
     // Simulate card programming process
     const interval = setInterval(() => {
@@ -57,11 +78,12 @@ export function CardIssuanceModal({ isOpen, onClose, user, onIssuanceComplete }:
                 setTimeout(() => {
                   const success = Math.random() > 0.05 // 95% success rate
                   if (success) {
-                    const newCardId = `CRD${Math.floor(Math.random() * 100000)}`
+                    // Use RFID UID as card number, or generate one if not available
+                    const newCardId = rfidUID || `CRD${Math.floor(Math.random() * 100000)}`
                     setCardId(newCardId)
                     setStep('success')
                     setTimeout(() => {
-                      onIssuanceComplete(user.id, newCardId)
+                      onIssuanceComplete(user.id, newCardId, rfidUID)
                       onClose()
                       toast.success(`Smart card issued successfully for ${user.fullName}`)
                     }, 2000)
@@ -112,9 +134,14 @@ export function CardIssuanceModal({ isOpen, onClose, user, onIssuanceComplete }:
                   <p><strong>Features:</strong> Access Control, Attendance, Payments</p>
                 </div>
               </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">
+                  📡 This process will enroll the user's physical RFID card and then program it.
+                </p>
+              </div>
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                 <p className="text-sm text-yellow-800">
-                  ⚠️ Ensure card printer has sufficient card stock before proceeding.
+                  ⚠️ Ensure RFID reader is connected and card printer has sufficient card stock.
                 </p>
               </div>
             </div>
@@ -124,6 +151,37 @@ export function CardIssuanceModal({ isOpen, onClose, user, onIssuanceComplete }:
             >
               Issue Smart Card
             </Button>
+          </div>
+        )
+
+      case 'rfid-scan':
+        return (
+          <div className="text-center space-y-6">
+            <div className="text-8xl mb-4">📡</div>
+            <div>
+              <h3 className="text-lg font-semibold mb-2">RFID Card Enrollment</h3>
+              <p className="text-gray-600 mb-4">
+                Please tap your NFC/RFID card on the reader to enroll it with {user.fullName}'s account.
+              </p>
+              <RFIDReaderComponent
+                onCardDetected={handleRFIDCardDetected}
+                isActive={true}
+                title="Smart Card Reader"
+                description="13.56MHz NFC/RFID card enrollment"
+                showTestMode={true}
+                className="max-w-md mx-auto"
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => setStep('instructions')} className="flex-1">
+                Back
+              </Button>
+              {detectedCard && (
+                <Button onClick={continueWithProgramming} className="flex-1 bg-gradient-to-r from-green-600 to-green-700">
+                  Continue with {CardUtils.formatUID(detectedCard.uid)}
+                </Button>
+              )}
+            </div>
           </div>
         )
 
@@ -170,6 +228,16 @@ export function CardIssuanceModal({ isOpen, onClose, user, onIssuanceComplete }:
                 <p className="text-sm text-green-800">
                   <strong>Card ID:</strong> {cardId}
                 </p>
+                {rfidUID && (
+                  <p className="text-sm text-green-800">
+                    <strong>RFID UID:</strong> {CardUtils.formatUID(rfidUID)}
+                  </p>
+                )}
+                {detectedCard && (
+                  <p className="text-sm text-green-800">
+                    <strong>Card Type:</strong> {detectedCard.type.toUpperCase()}
+                  </p>
+                )}
                 <p className="text-sm text-green-800">
                   <strong>User:</strong> {user?.fullName} ({user?.employeeId})
                 </p>

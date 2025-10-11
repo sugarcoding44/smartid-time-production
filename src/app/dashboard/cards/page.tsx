@@ -159,7 +159,7 @@ export default function CardManagementPage() {
     setManualIssueOpen(true)
   }
 
-  const handleCardIssuance = async (userId: string, cardId: string) => {
+  const handleCardIssuance = async (userId: string, cardId: string, rfidUID?: string) => {
     try {
       const response = await fetch('/api/smart-cards', {
         method: 'POST',
@@ -168,7 +168,8 @@ export default function CardManagementPage() {
         },
         body: JSON.stringify({
           user_id: userId,
-          card_number: cardId
+          card_number: cardId,
+          rfid_uid: rfidUID
         })
       })
       
@@ -204,7 +205,8 @@ export default function CardManagementPage() {
         },
         body: JSON.stringify({
           user_id: selectedUser.user_id,
-          card_number: manualCardDetails.cardId
+          card_number: manualCardDetails.cardId,
+          rfid_uid: manualCardDetails.cardId // In manual mode, assume the entered ID is the RFID UID
         })
       })
       

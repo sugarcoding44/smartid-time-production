@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'supabase_service.dart';
 
 class LeaveService extends ChangeNotifier {
   static const String apiBaseUrl = 'http://localhost:3003/api';

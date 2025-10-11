@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../widgets/logo_widget.dart';
 import '../main.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -19,16 +20,23 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              SmartIdTheme.slate900,
-              SmartIdTheme.slate800,
-            ],
+            colors: isDarkMode
+                ? [
+                    SmartIdTheme.slate900,
+                    SmartIdTheme.slate800,
+                  ]
+                : [
+                    SmartIdTheme.slate50,
+                    SmartIdTheme.slate100,
+                  ],
           ),
         ),
         child: SafeArea(
@@ -43,13 +51,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
+                    gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [
-                        SmartIdTheme.violet900,
-                        SmartIdTheme.purple800,
-                      ],
+                      colors: isDarkMode
+                          ? [
+                              SmartIdTheme.violet900,
+                              SmartIdTheme.purple800,
+                            ]
+                          : [
+                              SmartIdTheme.indigo500,
+                              SmartIdTheme.indigo600,
+                            ],
                     ),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
@@ -62,31 +75,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: SmartIdTheme.indigo500.withOpacity(0.2),
+                          color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Icon(
-                          Icons.school,
-                          size: 48,
-                          color: SmartIdTheme.indigo400,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'SmartID Hub',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: SmartIdTheme.slate50,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Institution Management System',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: SmartIdTheme.violet400.withOpacity(0.8),
-                        ),
-                        textAlign: TextAlign.center,
+                        child: const LogoWidget.large(),
                       ),
                     ],
                   ),
@@ -98,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   'Welcome Back! 👋',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: SmartIdTheme.slate50,
+                    color: Theme.of(context).colorScheme.onBackground,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -108,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(
                   'Sign in to access your dashboard',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: SmartIdTheme.slate400,
+                    color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -119,15 +111,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: SmartIdTheme.slate800,
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: SmartIdTheme.slate700,
+                      color: Theme.of(context).colorScheme.outline,
                       width: 1,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
+                        color: Theme.of(context).shadowColor.withOpacity(0.1),
                         blurRadius: 20,
                         offset: const Offset(0, 8),
                       ),

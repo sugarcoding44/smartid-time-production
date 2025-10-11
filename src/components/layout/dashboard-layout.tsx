@@ -90,7 +90,7 @@ const navigationSections = {
     title: 'Biometric & Cards',
     items: [
       { name: 'Palm Management', href: '/dashboard/palm', icon: Hand },
-      { name: 'SmartID Card', href: '/dashboard/cards', icon: CreditCard },
+      { name: 'smartID Card', href: '/smartid-cards', icon: CreditCard },
       { name: 'Order Cards', href: '/dashboard/order-cards', icon: ShoppingCart },
     ] as NavigationItem[]
   },

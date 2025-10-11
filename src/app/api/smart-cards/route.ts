@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { user_id, card_number } = body
+    const { user_id, card_number, rfid_uid } = body
 
     if (!user_id || !card_number) {
       return NextResponse.json(
@@ -175,6 +175,8 @@ export async function POST(request: NextRequest) {
         user_id,
         institution_id: targetUser.institution_id,
         card_number,
+        nfc_id: rfid_uid || card_number, // Use RFID UID if provided, otherwise use card_number
+        smartid_hq_card_id: rfid_uid || card_number, // For compatibility
         status: 'active',
         issued_at: new Date().toISOString(),
         expires_at: expiresAt.toISOString()
@@ -189,7 +191,7 @@ export async function POST(request: NextRequest) {
         const { error: userUpdateError } = await serviceSupabase
           .from('users')
           .update({ 
-            smart_card_id: card_number
+            smart_card_id: rfid_uid || card_number // Store RFID UID if available
           })
           .eq('id', user_id)
 
@@ -205,6 +207,7 @@ export async function POST(request: NextRequest) {
           data: { 
             user_id, 
             card_number,
+            nfc_id: rfid_uid || card_number,
             status: 'active'
           },
           message: 'Smart card saved to user record'
@@ -225,10 +228,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Update user's smart_card_id
+    // Update user's smart_card_id with RFID UID
     await serviceSupabase
       .from('users')
-      .update({ smart_card_id: card_number })
+      .update({ smart_card_id: rfid_uid || card_number })
       .eq('id', user_id)
 
     return NextResponse.json({

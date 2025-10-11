@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'supabase_service.dart';
 
 class WalletService extends ChangeNotifier {
   static const String apiBaseUrl = 'http://localhost:3003/api';
@@ -12,12 +11,21 @@ class WalletService extends ChangeNotifier {
   String? _error;
   DateTime? _lastUpdated;
 
+  // Enrollment status for SmartID methods
+  bool _hasSmartIdPalm = false;
+  bool _hasSmartIdCard = false;
+
   // Getters
   double get balance => _balance;
   List<Map<String, dynamic>> get transactions => _transactions;
   bool get isLoading => _isLoading;
   String? get error => _error;
   DateTime? get lastUpdated => _lastUpdated;
+
+  // Expose enrollment flags
+  bool get hasSmartIdPalm => _hasSmartIdPalm;
+  bool get hasSmartIdCard => _hasSmartIdCard;
+  bool get hasAnyEnrollment => _hasSmartIdPalm || _hasSmartIdCard;
 
   // Fetch wallet data
   Future<void> fetchWalletData(String userId, [String? employeeId]) async {
@@ -27,17 +35,29 @@ class WalletService extends ChangeNotifier {
 
     try {
       print('💰 Fetching wallet data for user: $userId');
-      
-      // Fetch wallet balance
-      await _fetchWalletBalance(userId, employeeId);
-      
-      // Fetch transaction history
-      await _fetchTransactionHistory(userId, employeeId);
-      
-      _lastUpdated = DateTime.now();
-      _error = null;
-      
-      print('✅ Wallet data fetched successfully');
+
+      // First check SmartID enrollment status
+      await fetchEnrollmentStatus(userId);
+
+      if (!hasAnyEnrollment) {
+        // If no enrollment, do not fetch wallet details
+        _balance = 0.0;
+        _transactions = [];
+        _lastUpdated = DateTime.now();
+        _error = 'No SmartID method enrolled';
+        print('⚠️ Skipping wallet fetch — no SmartID Card or Palm enrolled');
+      } else {
+        // Fetch wallet balance
+        await _fetchWalletBalance(userId, employeeId);
+        
+        // Fetch transaction history
+        await _fetchTransactionHistory(userId, employeeId);
+        
+        _lastUpdated = DateTime.now();
+        _error = null;
+        
+        print('✅ Wallet data fetched successfully');
+      }
     } catch (e) {
       _error = 'Failed to load wallet data: ${e.toString()}';
       print('❌ Wallet data fetch error: $e');
@@ -239,6 +259,31 @@ class WalletService extends ChangeNotifier {
   // Refresh all data
   Future<void> refreshData(String userId, [String? employeeId]) async {
     await fetchWalletData(userId, employeeId);
+  }
+
+  // Fetch SmartID enrollment status (Card and Palm)
+  Future<void> fetchEnrollmentStatus(String userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$apiBaseUrl/smartid/enrollment?userId=$userId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          _hasSmartIdCard = (data['data']['hasCard'] ?? false) == true;
+          _hasSmartIdPalm = (data['data']['hasPalm'] ?? false) == true;
+        }
+      }
+    } catch (e) {
+      // Fallback to false if API not available
+      _hasSmartIdCard = _hasSmartIdCard; // keep previous if any
+      _hasSmartIdPalm = _hasSmartIdPalm; // keep previous if any
+      print('⚠️ Could not fetch SmartID enrollment status: $e');
+    } finally {
+      notifyListeners();
+    }
   }
 
   // Clear all data

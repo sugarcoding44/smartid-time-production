@@ -3,11 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
-import 'package:permission_handler/permission_handler.dart';
 import 'supabase_service.dart';
 
 class AttendanceService extends ChangeNotifier {
-  static const String apiBaseUrl = 'http://localhost:3003/api';
+  static const String apiBaseUrl = 'http://192.168.1.106:3003/api';
   
   Map<String, dynamic>? _attendanceData;
   Map<String, dynamic>? _todayStatus;
@@ -402,5 +401,88 @@ class AttendanceService extends ChangeNotifier {
       return '${localTime.hour.toString().padLeft(2, '0')}:${localTime.minute.toString().padLeft(2, '0')}';
     }
     return null;
+  }
+  
+  // Get recent attendance records
+  List<Map<String, dynamic>> get recentRecords {
+    final attendanceData = _attendanceData;
+    if (attendanceData != null && attendanceData['recent_records'] != null) {
+      final recentList = attendanceData['recent_records'] as List;
+      final records = recentList.cast<Map<String, dynamic>>();
+      
+      // Sort by date in descending order (newest first)
+      records.sort((a, b) {
+        try {
+          final dateA = DateTime.parse(a['date'] ?? '1970-01-01');
+          final dateB = DateTime.parse(b['date'] ?? '1970-01-01');
+          return dateB.compareTo(dateA); // Descending order
+        } catch (e) {
+          return 0; // If parsing fails, maintain original order
+        }
+      });
+      
+      return records;
+    }
+    return [];
+  }
+  
+  // Helper method to format time from string
+  String? formatTimeFromString(String? timeStr) {
+    if (timeStr == null || timeStr.isEmpty) return null;
+    
+    try {
+      // Handle different time formats
+      DateTime time;
+      
+      if (timeStr.contains('T')) {
+        // ISO format with date
+        time = DateTime.parse(timeStr);
+        // Add 8 hours for Malaysia timezone (UTC+8)
+        time = time.add(Duration(hours: 8));
+      } else if (timeStr.contains(':')) {
+        // Just time format like "09:00:00" or "09:00"
+        final parts = timeStr.split(':');
+        if (parts.length >= 2) {
+          final hour = int.parse(parts[0]);
+          final minute = int.parse(parts[1]);
+          time = DateTime(2000, 1, 1, hour, minute);
+        } else {
+          return timeStr; // Return as-is if can't parse
+        }
+      } else {
+        return timeStr; // Return as-is if unrecognized format
+      }
+      
+      return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      print('❌ Error formatting time $timeStr: $e');
+      return timeStr; // Return original string if parsing fails
+    }
+  }
+  
+  // Helper method to format date from string
+  String? formatDateFromString(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return null;
+    
+    try {
+      final date = DateTime.parse(dateStr);
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final yesterday = today.subtract(Duration(days: 1));
+      final recordDate = DateTime(date.year, date.month, date.day);
+      
+      if (recordDate == today) {
+        return 'Today';
+      } else if (recordDate == yesterday) {
+        return 'Yesterday';
+      } else {
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return '${date.day} ${months[date.month - 1]}';
+      }
+    } catch (e) {
+      print('❌ Error formatting date $dateStr: $e');
+      return dateStr;
+    }
   }
 }

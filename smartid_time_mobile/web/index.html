@@ -38,7 +38,6 @@
 <body>
   <!-- This script installs service_worker.js to provide PWA functionality to application. -->
   <script>
-    var serviceWorkerVersion = null;
     var scriptLoaded = false;
     function loadMainDartJs() {
       if (scriptLoaded) {
@@ -55,7 +54,7 @@
       // Service workers are supported. Use them.
       window.addEventListener('load', function () {
         // Wait for registration to finish before dropping the initial splash screen.
-        navigator.serviceWorker.register('flutter_service_worker.js?v=' + serviceWorkerVersion).then((reg) => {
+        navigator.serviceWorker.register('flutter_service_worker.js?v={{flutter_service_worker_version}}').then((reg) => {
           function waitForActivation(serviceWorker) {
             serviceWorker.addEventListener('statechange', () => {
               if (serviceWorker.state == 'activated') {
@@ -68,7 +67,7 @@
             // No active web worker and we have installed or are installing
             // one for the first time. Simply wait for it to activate.
             waitForActivation(reg.installing || reg.waiting);
-          } else if (!reg.active.scriptURL.endsWith(serviceWorkerVersion)) {
+          } else if (!reg.active.scriptURL.endsWith('{{flutter_service_worker_version}}')) {
             // When the app updates the serviceWorkerVersion changes, so we
             // need to ask the service worker to update.
             console.log('New service worker available.');
